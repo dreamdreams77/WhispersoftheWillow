@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Whispers of the Great Willow</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game">
+  <canvas id="view"></canvas>
+
+  <div id="hud">
+    <div class="bars">
+      <div class="bar"><span>Health</span><div class="fill" id="hpFill"></div></div>
+      <div class="bar"><span>Stamina</span><div class="fill stam" id="stFill"></div></div>
+    </div>
+    <div class="info">
+      <span id="seasonLbl">Spring</span> · <span id="dayLbl">Day 1</span> ·
+      <span id="wlLbl">✦ 0 Willowlight</span> ·
+      <span id="wxLbl"></span>
+    </div>
+    <div id="objective"></div>
+  </div>
+
+  <div id="prompt" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+
+  <div id="dialogue" class="panel hidden">
+    <div class="speaker" id="dlgName"></div>
+    <div class="text" id="dlgText"></div>
+    <div class="choices" id="dlgChoices"></div>
+    <button class="ghost" id="dlgClose">Continue</button>
+  </div>
+
+  <div id="menu" class="panel hidden">
+    <div class="tabs" id="menuTabs"></div>
+    <div id="menuBody"></div>
+    <button class="ghost" id="menuClose">Close</button>
+  </div>
+
+  <div id="title" class="panel center">
+    <h1>Whispers of the Great Willow</h1>
+    <p>A woodland roguelite and life simulation.</p>
+    <div class="species" id="speciesPick"></div>
+    <div class="species" id="originPick"></div>
+    <input id="nameIn" maxlength="14" placeholder="Your critter's name" value="Pip">
+    <div class="row">
+      <button id="btnNew">New Life</button>
+      <button id="btnLoad" class="ghost">Continue</button>
+    </div>
+    <div class="row" id="titleExtra">
+      <button id="btnGuide" class="ghost">How to Play</button>
+      <button id="btnOptions" class="ghost">Options</button>
+    </div>
+  </div>
+
+  <div id="touch" class="hidden">
+    <div class="dpad">
+      <button data-k="up">▲</button>
+      <div><button data-k="left">◀</button><button data-k="down">▼</button><button data-k="right">▶</button></div>
+    </div>
+    <div class="acts">
+      <button data-k="act">Act</button>
+      <button data-k="atk">Strike</button>
+      <button data-k="dodge">Dodge</button>
+      <button data-k="menu">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script src="audio.js"></script>
+<script src="data.js"></script>
+<script src="starfall.js"></script>
+<script src="depth.js"></script>
+<script src="core.js"></script>
+<script src="world.js"></script>
+<script src="villagemore.js"></script>
+<script src="combat.js"></script>
+<script src="gameart.js"></script>
+<script src="minigame.js"></script>
+<script src="skipgame.js"></script>
+<script src="acorngame.js"></script>
+<script src="whackgame.js"></script>
+<script src="ringtoss.js"></script>
+<script src="carnival.js"></script>
+<script src="deeds.js"></script>
+<script src="options.js"></script>
+<script src="gear.js"></script>
+<script src="ui.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

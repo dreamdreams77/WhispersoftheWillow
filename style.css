@@ -1,0 +1,93 @@
+:root{--bark:#4a3424;--parch:#f3e6c4;--moss:#6b8f4e;--gold:#e8b84a;--ink:#2a1d14;--moon:#9bb7e0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0f1a14;overflow:hidden;font-family:Georgia,"Palatino Linotype",serif;color:var(--ink);user-select:none}
+#game{position:fixed;inset:0}
+canvas#view{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:auto}
+.hidden{display:none!important}
+
+#hud{position:absolute;top:10px;left:10px;right:10px;pointer-events:none;color:#fff8e6;text-shadow:0 1px 3px #000}
+.bars{display:flex;gap:10px;margin-bottom:6px}
+.bar{width:170px;font-size:12px}
+.bar span{display:block;margin-bottom:2px}
+.fill{height:10px;border-radius:6px;background:#c24a3c;box-shadow:inset 0 0 0 2px #0006;transition:width .2s}
+.fill.stam{background:#d9b44a}
+.info{font-size:13px;background:#0008;display:inline-block;padding:4px 10px;border-radius:8px}
+#objective{margin-top:6px;font-size:13px;background:#0008;display:inline-block;padding:4px 10px;border-radius:8px;max-width:90%}
+
+#prompt{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);background:var(--parch);color:var(--ink);padding:6px 14px;border-radius:14px;border:2px solid var(--bark);font-size:14px;white-space:nowrap;box-shadow:0 4px 12px #0007}
+#toast{position:absolute;top:18%;left:50%;transform:translateX(-50%);background:#1e2b20e6;color:var(--gold);padding:10px 18px;border-radius:12px;font-size:15px;border:1px solid var(--gold);max-width:86%;text-align:center;animation:fade 3s forwards}
+@keyframes fade{0%,80%{opacity:1}100%{opacity:0}}
+
+.panel{position:absolute;left:50%;transform:translateX(-50%);background:var(--parch);border:3px solid var(--bark);border-radius:14px;box-shadow:0 10px 30px #000a;padding:16px;color:var(--ink);max-height:80%;overflow:auto}
+.panel.center{top:50%;transform:translate(-50%,-50%);width:min(420px,92%);text-align:center}
+#dialogue{bottom:14px;width:min(640px,94%);z-index:30}
+body.dlg-open #touch{visibility:hidden}
+#dialogue .speaker{font-weight:bold;color:var(--bark);margin-bottom:4px}
+#dialogue .text{font-size:16px;min-height:44px;line-height:1.4}
+#dlgChoices button.sel{box-shadow:0 0 0 3px var(--gold)}
+#dlgChoices .hint{font-size:12px;opacity:.65;text-align:center;margin-top:2px}
+#dlgChoices{display:flex;flex-direction:column}
+.choices{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+#menu{top:50%;transform:translate(-50%,-50%);width:min(560px,94%);max-height:86%}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{flex:1}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:10px}
+.slot{background:#fff6dc;border:1px solid var(--bark);border-radius:8px;padding:6px;font-size:13px}
+.slot small{display:block;color:#6a5238}
+
+button{background:var(--moss);color:#fff;border:0;border-radius:10px;padding:9px 14px;font:inherit;font-size:15px;cursor:pointer;box-shadow:0 2px 0 #3e5a2a}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.45;cursor:default}
+button.ghost{background:#e9d6a6;color:var(--ink);box-shadow:0 2px 0 #a8895a}
+button.ghost:hover{background:#f0e0b4}
+input{width:100%;padding:9px;border-radius:8px;border:2px solid var(--bark);font:inherit;margin:10px 0;background:#fff8e6}
+.row{display:flex;gap:8px;justify-content:center}
+.species{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.species button{background:#fff6dc;color:var(--ink);box-shadow:inset 0 0 0 2px var(--bark);font-size:13px;padding:8px 4px}
+.species button.sel{background:var(--gold);box-shadow:inset 0 0 0 3px var(--bark)}
+
+#touch{position:absolute;inset:auto 0 0 0;pointer-events:none;display:flex;justify-content:space-between;padding:12px;}
+#touch button{pointer-events:auto;opacity:.82;width:58px;height:58px;padding:0;margin:3px;font-size:18px;border-radius:50%}
+.dpad{display:flex;flex-direction:column;align-items:center}
+.dpad>div{display:flex}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-self:flex-end}
+.acts button{width:76px;height:52px;border-radius:14px;font-size:13px}
+
+/* Phone layout: map on top, a control band below it. Dialogues use the band too. */
+@media (max-width:600px){
+  .bar{width:120px}
+  #prompt{bottom:calc(var(--band,210px) + 10px)}
+  #touch{height:var(--band,210px);padding:8px 10px;background:#0f1a14;border-top:2px solid var(--bark);align-items:center}
+  #touch button{width:50px;height:50px;font-size:16px;margin:2px}
+  .acts{gap:4px}
+  .acts button{width:72px;height:44px;font-size:13px;border-radius:12px}
+  #dialogue{left:0;right:0;bottom:0;width:auto;max-width:none;transform:none;max-height:var(--band,210px);border-radius:0;border-width:3px 0 0 0;padding:10px 14px;overflow:auto}
+  #dialogue .speaker{margin-bottom:2px}
+  #dialogue .text{font-size:14px;min-height:0;line-height:1.35}
+  #dlgChoices{gap:4px}
+  #dlgChoices button{padding:6px 10px;font-size:14px}
+  #dlgChoices .hint{display:none}
+  #dialogue .ghost{padding:6px 10px}
+  /* Title: fill the screen and scroll, so New Life and Continue are never cut off */
+  #title{top:8px;bottom:8px;left:8px;right:8px;width:auto;max-width:none;max-height:none;transform:none;overflow:auto;padding:12px}
+  #title h1{font-size:24px;margin:4px 0}
+  #title .species{grid-template-columns:repeat(2,1fr);gap:6px}
+  #title .row{flex-wrap:wrap;gap:10px;margin-top:6px}
+  #title #btnNew,#title #btnLoad{min-width:140px;padding:12px 18px}
+  /* Menus: fill the map above the control band and scroll, so nothing hides under the buttons */
+  #menu{top:8px;bottom:calc(var(--band,210px) + 8px);left:50%;transform:translateX(-50%);width:min(560px,94%);height:auto;max-height:none;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+}
+
+/* options and guide overlay on the title screen */
+#optPanel{top:50%;transform:translate(-50%,-50%);width:min(520px,94%);max-height:88%;text-align:left;z-index:5}
+#optPanel h3,#menuBody h3{margin:10px 0 6px}
+.optrow{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
+.optrow input[type=range]{flex:1;min-width:140px;accent-color:#5f7a3a;height:28px}
+.optrow label{font-size:14px}
+.guide p,.guide li{font-size:14px;line-height:1.45;margin:4px 0}
+.guide ul{padding-left:18px;margin:4px 0}
+@media (max-width:760px),(max-height:520px){
+  #optPanel{top:8px;bottom:8px;left:8px;right:8px;width:auto;max-height:none;transform:none;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+}
+.optrow input[type=checkbox]{width:24px;height:24px;flex:none;margin:0;display:inline-block;accent-color:#5f7a3a}
+.optrow input[type=range]{width:auto;display:block}
