@@ -528,22 +528,43 @@ function drawVillage(ctx, cam, t) {
   // dappled light through the canopy
   drawDappledLight(ctx, t);
 
-  // buildings
-  drawHut(ctx, 260, 300, "#7a5636", "Kitchen");
-  drawHut(ctx, 1080, 300, "#6a4a58", "Workshop");
-  drawHut(ctx, 300, 560, "#5a6b3a", "Library");
-  drawHut(ctx, 1040, 560, "#8b6a3a", "Herbalist");
-  drawHut(ctx, 1000, 250, "#4a4e5a", "Forge");
-
-  // decor trees
-  for (const s of VIL_SOLIDS) {
-    if (s.w === 280) continue; // willow drawn separately
-    drawTree(ctx, s.x + s.w / 2, s.y + s.h / 2, Math.max(s.w, s.h) / 2);
-  }
-
+  drawGrassTufts(ctx, cam, t);
   drawWillow(ctx, t);
-  drawCarnivalTent(ctx, 480, 290, t);
-  if (peddlerHere()) drawPeddlerCart(ctx, 1130, 800, t);
+
+  // everything that stands up is drawn back to front, so critters walk behind trees and huts
+  const stand = [];
+  const add = (y, fn) => stand.push({ y, fn });
+  add(300 + 50, () => drawHut(ctx, 260, 300, "#7a5636", "Kitchen"));
+  add(300 + 50, () => drawHut(ctx, 1080, 300, "#6a4a58", "Workshop"));
+  add(560 + 50, () => drawHut(ctx, 300, 560, "#5a6b3a", "Library"));
+  add(560 + 50, () => drawHut(ctx, 1040, 560, "#8b6a3a", "Herbalist"));
+  add(250 + 50, () => drawHut(ctx, 1000, 250, "#4a4e5a", "Forge"));
+  for (const sol of VIL_SOLIDS) {
+    if (sol.w === 280) continue; // willow drawn separately
+    const r = Math.max(sol.w, sol.h) / 2, cx = sol.x + sol.w / 2, cy = sol.y + sol.h / 2;
+    add(cy + r * 0.7, () => drawTree(ctx, cx, cy, r));
+  }
+  add(290 + 40, () => drawCarnivalTent(ctx, 480, 290, t));
+  if (peddlerHere()) add(800, () => drawPeddlerCart(ctx, 1130, 800, t));
+  add(690, () => drawShrine(ctx, 700, 690));
+  add(590, () => drawWishingWell(ctx, 610, 590, t));
+  add(380, () => drawNoticeBoard(ctx, 410, 380, t));
+  add(470, () => drawScarecrow(ctx, 900, 470, t));
+  add(628, () => drawLampPost(ctx, 790, 628, t));
+  add(690, () => drawLampPost(ctx, 1010, 690, t));
+  add(330, () => drawLighthouse(ctx, 1230, 330, t));
+  add(P.y + 14, () => {
+    drawCritter(ctx, P.x, P.y, G.species, P.facing, P.moving ? P.t : 0, 1);
+    if (G.activePet) drawPetSprite(ctx, P.x - P.facing * 26, P.y + 8, G.activePet, t);
+  });
+  add(650 + 22, () => drawNpc(ctx, 300, 650, "#c98a4a", "owl", "Thistlemoon"));
+  add(655 + 22, () => drawNpc(ctx, 1060, 655, "#e2b7a0", "mouse", "Posy"));
+  add(345 + 22, () => drawNpc(ctx, 930, 345, "#4a4a52", "badger", "Brindle"));
+  add(430 + 22, () => drawNpc(ctx, 1180, 430, "#6e4f3f", "mole", "Nubbins"));
+
+  // ground-level things go first
+  drawFlowerBed(ctx, 980, 440, t);
+  drawFlowerBed(ctx, 250, 790, t);
 
   // gather nodes
   for (const n of WORLD.nodes) {
@@ -572,27 +593,8 @@ function drawVillage(ctx, cam, t) {
   drawRingPitch(ctx, 840, 745, t);
   drawGate(ctx, 830, 120, "Starfall Meadow", gateLock("starfall") ? "#2a3566" : "#9fb8ff", gateSub("starfall"));
   drawGate(ctx, 100, 330, "Corrupted Heartwood", gateLock("heartwood") ? "#4a2a40" : "#c76fd6", gateSub("heartwood"));
-  drawShrine(ctx, 700, 690);
+  stand.sort((p, q) => p.y - q.y).forEach(o => o.fn());
 
-  // village life: the well, the notice board, flower beds and a scarecrow
-  drawWishingWell(ctx, 610, 590, t);
-  drawNoticeBoard(ctx, 410, 380, t);
-  drawFlowerBed(ctx, 980, 440, t);
-  drawFlowerBed(ctx, 250, 790, t);
-  drawScarecrow(ctx, 900, 470, t);
-  drawLampPost(ctx, 790, 628, t);
-  drawLampPost(ctx, 1010, 690, t);
-  drawLighthouse(ctx, 1230, 330, t);
-
-  // player
-  drawCritter(ctx, P.x, P.y, G.species, P.facing, P.moving ? P.t : 0, 1);
-  if (G.activePet) drawPetSprite(ctx, P.x - P.facing * 26, P.y + 8, G.activePet, t);
-
-  // NPCs
-  drawNpc(ctx, 300, 650, "#c98a4a", "owl", "Thistlemoon");
-  drawNpc(ctx, 1060, 655, "#e2b7a0", "mouse", "Posy");
-  drawNpc(ctx, 930, 345, "#4a4a52", "badger", "Brindle");
-  drawNpc(ctx, 1180, 430, "#6e4f3f", "mole", "Nubbins");
 
   // floating motes
   drawMotes(ctx, t, 700, 400, 150);

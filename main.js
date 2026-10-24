@@ -127,8 +127,12 @@ let last = performance.now();
 let autosaveT = 0;
 
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const rawDt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  // hit-stop: the simulation holds still for a few frames when a blow lands
+  let dt = rawDt;
+  if (FX.freezeT > 0) { FX.freezeT -= rawDt; dt = 0; }
+  fxStep(dt);
   const t = now / 1000;
 
   if (MG.active) {
@@ -231,6 +235,8 @@ function draw(t) {
     CAM.x = clamp(P.x - CAM.vw / 2, 0, Math.max(0, VIL.w - CAM.vw));
     CAM.y = clamp(P.y - CAM.vh / 2, 0, Math.max(0, VIL.h - CAM.vh));
     drawVillage(ctx, CAM, t);
+    drawVillageLighting(ctx, CAM, t);
+    drawSeasonAir(ctx, t, CAM.vw, CAM.vh);
     drawScreenVignette(ctx, CAM.vw, CAM.vh, 0.45);
     if (MG.active) drawFireflyCatch(ctx, t, CAM.vw, CAM.vh);
     else if (SK.active) drawStoneSkip(ctx, t, CAM.vw, CAM.vh);
@@ -302,7 +308,8 @@ function drawExpedition(ctx, t) {
   ctx.fillStyle = "#0b120e";
   ctx.fillRect(0, 0, CAM.vw, CAM.vh);
   ctx.save();
-  ctx.translate(ox, oy);
+  const shk = fxShakeOffset();
+  ctx.translate(ox + shk.x, oy + shk.y);
   ctx.scale(s, s);
 
   // ground
@@ -348,6 +355,8 @@ function drawExpedition(ctx, t) {
   for (const n of room.nodes) {
     if (!n.alive) continue;
     const c = DATA.items[n.item] ? DATA.items[n.item].color : "#fff";
+    ctx.fillStyle = "rgba(0,0,0,.3)";
+    ctx.beginPath(); ctx.ellipse(n.x, n.y + 8, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = c;
     ctx.beginPath(); ctx.arc(n.x, n.y, 9, 0, Math.PI * 2); ctx.fill();
   }
@@ -355,12 +364,12 @@ function drawExpedition(ctx, t) {
   // points
   for (const p of room.points) {
     const pulse = 0.5 + 0.5 * Math.sin(t * 3);
-    ctx.fillStyle = p.kind === "exit" && p.locked ? "rgba(120,60,60,.5)" : `rgba(200,255,220,${0.3 + 0.3 * pulse})`;
+    ctx.fillStyle = p.kind === "exit" && p.locked ? "rgba(120,60,60,.5)" : p.kind === "altar" ? `rgba(255,214,120,${0.35 + 0.3 * pulse})` : `rgba(200,255,220,${0.3 + 0.3 * pulse})`;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#fff6dc";
     ctx.font = "13px Georgia";
     ctx.textAlign = "center";
-    const label = { shrine: "Shrine", traveler: "Lost Critter", treasure: "Treasure", silverbell: "Silverbell", crossroads: "Crossroads", descend: "Stair Down", exit: p.locked ? "Sealed" : "Portal to Village" }[p.kind] || "";
+    const label = { shrine: "Shrine", traveler: "Lost Critter", treasure: "Treasure", silverbell: "Silverbell", crossroads: "Crossroads", altar: "Relic Altar", descend: "Stair Down", exit: p.locked ? "Sealed" : "Portal to Village" }[p.kind] || "";
     ctx.fillText(label, p.x, p.y + p.r + 16);
   }
 
@@ -375,6 +384,9 @@ function drawExpedition(ctx, t) {
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
     }
   }
+
+  drawBlasts(ctx, t);
+  fxDrawGround(ctx, t);
 
   // enemies
   for (const e of room.enemies) {
@@ -400,6 +412,7 @@ function drawExpedition(ctx, t) {
     eg.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = eg;
     ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 2.2, 0, Math.PI * 2); ctx.fill();
+    drawEliteAura(ctx, e, t);
     drawEnemyBody(ctx, e, t);
     // health bar
     ctx.fillStyle = "rgba(0,0,0,.5)";
@@ -414,6 +427,8 @@ function drawExpedition(ctx, t) {
 
   // projectiles
   for (const p of EX.projectiles) {
+    ctx.fillStyle = "rgba(0,0,0,.25)";
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 6, 2.5, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = p.dmg >= 30 ? "#8b5a2b" : "#fff6dc";
     ctx.beginPath(); ctx.arc(p.x, p.y, p.dmg >= 30 ? 9 : 4, 0, Math.PI * 2); ctx.fill();
   }
@@ -438,14 +453,6 @@ function drawExpedition(ctx, t) {
 
   if (G.activePet) drawPetSprite(ctx, EX.px - EX.fx * 26, EX.py + 8, G.activePet, t);
 
-  // strike arc
-  if (EX.strikeCd > 0.2) {
-    const a = Math.atan2(EX.fy, EX.fx);
-    ctx.strokeStyle = "rgba(255,246,220,.6)";
-    ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.arc(EX.px, EX.py, 52, a - 0.9, a + 0.9); ctx.stroke();
-  }
-
   // gloom: darkness everywhere except a pool of light around the player
   if (EX.hazard === "gloom") {
     const gl = ctx.createRadialGradient(EX.px, EX.py, 70, EX.px, EX.py, EX.buffs.keenEye ? 330 : 230);
@@ -455,6 +462,31 @@ function drawExpedition(ctx, t) {
     ctx.fillRect(0, 0, ROOM_W, ROOM_H);
   }
 
+  // torchlight: the room is dim, and light pools around the player, doors, foes and glowing things
+  if (EX.hazard !== "gloom") {
+    const lights = [{ x: EX.px, y: EX.py, r: 260, a: 0.95, color: "255,226,170" }];
+    for (const d of Object.keys(room.doors)) {
+      if (!room.doors[d]) continue;
+      const dx = d === "w" ? 30 : d === "e" ? ROOM_W - 30 : ROOM_W / 2, dy = d === "n" ? 30 : d === "s" ? ROOM_H - 30 : ROOM_H / 2;
+      lights.push({ x: dx, y: dy, r: 170 + 8 * Math.sin(t * 9 + dx), a: 0.8, color: "255,190,100" });
+    }
+    for (const n of room.nodes) if (n.alive) lights.push({ x: n.x, y: n.y, r: 50, a: 0.5, color: "200,255,200" });
+    for (const p of room.points) lights.push({ x: p.x, y: p.y, r: 120, a: 0.8, color: p.kind === "altar" ? "255,214,120" : "200,255,220" });
+    for (const e of room.enemies) {
+      if (e.dead) continue;
+      const col = e.mod ? ELITE_MODS[e.mod].color : e.def.color || "#ffffff";
+      const n = parseInt(col.slice(1), 16);
+      lights.push({ x: e.x, y: e.y, r: e.boss ? 190 : 70 + e.r, a: e.boss ? 0.7 : 0.45, color: `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}` });
+    }
+    for (const p of EX.projectiles) lights.push({ x: p.x, y: p.y, r: 70, a: 0.6, color: "255,200,120" });
+    for (const b of EX.blasts || []) lights.push({ x: b.x, y: b.y, r: b.r * 1.5, a: 0.7, color: "255,140,60" });
+    if (EX.buffs.spiritWisp) lights.push({ x: EX.px + Math.cos(t * 2) * 30, y: EX.py + Math.sin(t * 2) * 20 - 26, r: 90, a: 0.6, color: "155,194,255" });
+    const bg = region.bg[1], bn = parseInt(bg.slice(1), 16);
+    const dark = 0.42 + 0.07 * ((EX.depth || 1) - 1);
+    drawLighting(ctx, ROOM_W, ROOM_H, 0.5, [((bn >> 16) & 255) >> 2, ((bn >> 8) & 255) >> 2, (bn & 255) >> 2, Math.min(0.8, dark)], lights);
+  }
+  fxDrawTop(ctx, t);
+
   // hit vignette
   if (EX.hitFlash > 0) {
     ctx.fillStyle = `rgba(200,30,40,${EX.hitFlash * 0.25})`;
@@ -462,6 +494,14 @@ function drawExpedition(ctx, t) {
   }
 
   ctx.restore();
+
+  // low health: the screen edges throb red
+  if (G.hp > 0 && G.hp / G.maxHp < 0.3) {
+    const pulse = 0.18 + 0.12 * Math.sin(t * 6);
+    const lv = ctx.createRadialGradient(CAM.vw / 2, CAM.vh / 2, Math.min(CAM.vw, CAM.vh) * 0.35, CAM.vw / 2, CAM.vh / 2, Math.max(CAM.vw, CAM.vh) * 0.7);
+    lv.addColorStop(0, "rgba(160,10,20,0)"); lv.addColorStop(1, `rgba(160,10,20,${pulse})`);
+    ctx.fillStyle = lv; ctx.fillRect(0, 0, CAM.vw, CAM.vh);
+  }
 
   // HUD text. Wide screens: top-right block. Phones: a left column below the
   // health bars and objective, so it never runs into the Stamina bar.

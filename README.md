@@ -48,6 +48,16 @@ Each mini-game can be played once per village day, and earns Willowlight.
 - **Errands**: read the Notice Board each day for a small errand from a villager. Bring them the item for Willowlight and friendship.
 - **Carnival Midway** (the striped tent near the Willow): five fairground games, one try each per day. **Acorn Gallery** (shooting gallery), **High Striker** (time the swing to ring the bell), **Hunt the Acorn** (follow the shells), **Duck Pond** (hook the ducks), **Berry Basket** (catch the harvest, dodge the burrs). Score in all five at least once to become Midway Champion.
 
+## Atmosphere and expeditions
+
+- **Day and night**: the village clock runs through dawn, day, dusk and night (four minutes a day). Lamps, windows, the lighthouse, the Willow and the gates glow in the dark, and the player carries a soft light. Moonlit and stormy weather darken the day too.
+- **Living village**: critters walk behind trees and huts, grass sways and bends away from you, and each season has its own drifting petals, pollen, leaves or snow.
+- **Torchlit expeditions**: rooms are dim, with light pooling around you, doors, foes, relics and projectiles.
+- **Combat feel**: hit-stop, screen shake, knockback and stagger, slash swooshes, damage numbers, death bursts, dodge afterimages and a red pulse at low health.
+- **Eight new relics**: Briar Pact and Glass Acorn (cursed), Stormcap, Leech Moss, Echo Bark, Dewdrop Veil, Dust Devil and Magpie's Coin, plus five new resonances.
+- **Relic Altar**: a new room type that offers three relics. Take one, or leave them for a little health.
+- **Elite modifiers**: elites are Shielded, Thorned, Volatile, Brooding or Frenzied, each with its own colored aura.
+
 ## Files
 
 - `index.html`: the page, with the title screen, HUD, menu and touch controls.
@@ -58,6 +68,8 @@ Each mini-game can be played once per village day, and earns Willowlight.
 - `carnival.js`: the Carnival Midway tent and its five games.
 - `deeds.js`: the Deeds list, ranks, daily errands and Marigold the peddler.
 - `options.js`: the volume slider, save export and import, reset, and the optional How to Play guide.
+- `fx.js`: particles, hit-stop and shake, the lighting layer, grass and seasonal air.
+- `relics2.js`: the new relics and resonances, the Relic Altar and elite modifiers.
 - `gear.js`: the armor and weapons drawn on the player, and their Satchel icons.
 - `gameart.js`: the shared look of the mini-games.
 - `audio.js`: sound effects.

@@ -31,6 +31,7 @@ function activeResonances() { return RESONANCES.filter(r => hasRes(r.id)); }
 function grantRelic(r) {
   const before = activeResonances().map(x => x.id);
   EX.buffs[r] = true;
+  if (r === "dewVeil") EX.veil = true;
   activeResonances().filter(x => !before.includes(x.id)).forEach(x => toast(`Resonance: ${x.name}. ${x.desc}`, 4500));
 }
 
@@ -154,6 +155,7 @@ function genExpedition(regionId, depth = 1) {
     if (room.type === "shrine") room.points.push({ kind: "shrine", x: ROOM_W / 2, y: ROOM_H / 2, r: 30 });
     if (room.type === "traveler") room.points.push({ kind: "traveler", x: ROOM_W / 2, y: ROOM_H / 2, r: 30 });
     if (room.type === "treasure") room.points.push({ kind: "treasure", x: ROOM_W / 2, y: ROOM_H / 2, r: 30 });
+    if (room.type === "altar") room.points.push({ kind: "altar", x: ROOM_W / 2, y: ROOM_H / 2, r: 30 });
     if (room.type === "crossroads") room.points.push({ kind: "crossroads", x: ROOM_W / 2, y: ROOM_H / 2, r: 30 });
     if (room.type === "exit") room.points.push({ kind: "exit", x: ROOM_W / 2, y: ROOM_H / 2, r: 36 });
     if (room.type === "descent") room.points.push({ kind: "descend", x: ROOM_W / 2, y: ROOM_H / 2, r: 36 });
@@ -176,7 +178,7 @@ function omenHpMul(def) { return EX.omen === "quiet" && !def.boss ? 0.75 : 1; }
 function spawnEnemy(kind, def, _eliteChance, forceElite) {
   const elite = forceElite || Math.random() < (_eliteChance || 0);
   const mult = elite ? 1.6 : 1;
-  return {
+  const e = {
     kind, def, elite,
     name: (elite ? "Elite " : "") + def.name,
     x: randInt(200, 760), y: randInt(160, 440),
@@ -186,7 +188,10 @@ function spawnEnemy(kind, def, _eliteChance, forceElite) {
     boss: !!def.boss,
     atkCd: rand(0.5, 1.2), windup: 0, charge: 0, chargeDx: 0, chargeDy: 0, flash: 0, dead: false,
     hitT: 0,
+    stun: 0, kvx: 0, kvy: 0,
   };
+  if (elite && !def.boss) applyEliteMod(e);
+  return e;
 }
 
 // Omens: one risk-for-reward modifier chosen at the gate.
@@ -230,6 +235,9 @@ function startExpedition(regionId) {
   }
   EX.loot = {}; EX.wl = 0; EX.kills = 0;
   EX.projectiles = [];
+  EX.blasts = [];
+  EX.veil = false;
+  fxReset();
   EX.time = 0;
   EX.started = true;
   G.scene = "expedition";
@@ -262,6 +270,7 @@ function enterRoom(i, fromDir) {
   if (room.type === "boss" && room.enemies.every(e => e.dead)) room.cleared = true;
   EX.projectiles = [];
   EX.patches = [];
+  onEnterRoom();
   if (room.type === "boss" && !room.cleared) {
     const bossDef = DATA.enemies[DATA.regions[EX.region].bossKind];
     toast(bossDef.intro || `The ${bossDef.name} stirs.`);
@@ -305,7 +314,14 @@ function stepExpedition(dt) {
       EX.fx = dx; EX.fy = dy;
       const sp = 190 * species.speed * (G.species === "rabbit" ? 1.15 : 1) * (EX.hazard === "bogMire" ? 0.6 : 1) * (EX.buffs.swiftRoots ? 1.15 : 1) * (EX.omen === "swift" ? 1.1 : 1);
       moveExpedition(dx * sp * dt, dy * sp * dt, room);
+      FX.stepT -= dt;
+      if (FX.stepT <= 0) { FX.stepT = 0.16; fxBurst(EX.px, EX.py + 16, "rgba(190,180,150,.6)", 2, 40, { size: 0.8 }); }
     }
+  }
+  if (EX.dodgeT > 0) {
+    FX.ghostT -= dt;
+    if (FX.ghostT <= 0) { FX.ghostT = 0.04; FX.ghosts.push({ x: EX.px, y: EX.py, f: EX.fx >= 0 ? 1 : -1, t: 0 }); }
+    fxBurst(EX.px, EX.py + 14, "rgba(190,180,150,.5)", 1, 60, { size: 1.1 });
   }
 
   // dodge input
@@ -318,6 +334,7 @@ function stepExpedition(dt) {
     EX.invuln = 0.22;
     const d = Math.hypot(EX.fx, EX.fy) || 1;
     EX.dodgeDx = EX.fx / d; EX.dodgeDy = EX.fy / d;
+    onDodge();
   }
 
   // strike
@@ -326,7 +343,8 @@ function stepExpedition(dt) {
     SFX.play("strike");
     let range = 56;
     if (G.species === "squirrel") range = 90;
-    let dmg = 18 * (G.species === "badger" ? 1.25 : 1) * (EX.buffs.lightClaws ? 1.5 : 1) * (G.activePet === "emberfinch" ? 1.1 : 1) * (EX.buffs.stoneHeart ? 1.15 : 1) * (hasRes("thornedFury") ? 1.2 : 1);
+    let dmg = 18 * (G.species === "badger" ? 1.25 : 1) * (EX.buffs.lightClaws ? 1.5 : 1) * (G.activePet === "emberfinch" ? 1.1 : 1) * (EX.buffs.stoneHeart ? 1.15 : 1) * (hasRes("thornedFury") ? 1.2 : 1) * relicDamageMul();
+    fxSlash(range, EX.buffs.emberHeart ? "255,170,90" : "255,246,220");
     const weapon = G.equip.weapon && DATA.items[G.equip.weapon];
     if (weapon && weapon.atk) dmg *= weapon.atk;
     for (const e of room.enemies) {
@@ -335,7 +353,8 @@ function stepExpedition(dt) {
       const d = Math.hypot(ddx, ddy);
       if (d < range + e.r && (ddx * EX.fx + ddy * EX.fy) >= -e.r * 0.3) {
         if (EX.buffs.emberHeart || (G.activePet === "cinderkit" && Math.random() < 0.2)) e.burnT = 3;
-        hurtEnemy(e, Math.round(dmg));
+        hurtEnemy(e, Math.round(dmg), { strike: true });
+        afterStrikeHit(e, Math.round(dmg));
       }
     }
     // squirrels loose an acorn when nothing is in melee reach
@@ -361,6 +380,7 @@ function stepExpedition(dt) {
     e.burnT -= dt;
     hurtEnemy(e, (hasRes("blazingClaws") ? 10 : 5) * dt);
   }
+  stepBlasts(dt);
   if (roomEnemiesAlive()) {
     for (const e of room.enemies) {
       if (e.dead) continue;
@@ -443,6 +463,14 @@ function updateEnemy(e, dt, room) {
   const dxp = EX.px - e.x, dyp = EX.py - e.y;
   const d = Math.hypot(dxp, dyp) || 1;
 
+  // knockback: a struck foe is shoved back and staggers for a moment
+  if (e.kvx || e.kvy) {
+    e.x = clamp(e.x + e.kvx * dt, 40, ROOM_W - 40); e.y = clamp(e.y + e.kvy * dt, 40, ROOM_H - 40);
+    const f = Math.pow(0.004, dt); e.kvx *= f; e.kvy *= f;
+    if (Math.abs(e.kvx) + Math.abs(e.kvy) < 8) e.kvx = e.kvy = 0;
+  }
+  if (e.stun > 0) { e.stun -= dt; return; }
+
   if (e.boss) {
     // Bramblemaw: wind up thorns, then charge toward the player's last position
     if (e.charge > 0) {
@@ -481,24 +509,51 @@ function updateEnemy(e, dt, room) {
   if (e.def.poison && d < e.r + 14) EX.poisonT = 3;
 }
 
-function hurtEnemy(e, dmg) {
+function hurtEnemy(e, dmg, opts) {
   if (e.dead) return;
+  const o = opts || {};
+  const big = dmg >= 1;
+  const hitDir = Math.atan2(e.y - EX.py, e.x - EX.px);
+  // a shielded elite's shield soaks damage first
+  if (e.shield > 0 && big) {
+    const soak = Math.min(e.shield, dmg);
+    e.shield -= soak; dmg -= soak;
+    fxBurst(e.x, e.y, "#bfe6ff", 5, 150, { dir: hitDir, spark: true });
+    if (e.shield <= 0) { fxRing(e.x, e.y, e.r + 24, "rgba(190,230,255,.9)", 0.35); fxNumber(e.x, e.y - e.r - 20, "Shield broke", "#bfe6ff"); }
+    if (dmg < 1) { e.flash = 0.06; if (o.strike) fxFreeze(0.03); return; }
+  }
   e.hp -= dmg;
   e.flash = 0.12;
   e.hitT = 0.15;
+  if (big) {
+    fxNumber(e.x, e.y - e.r - 6, Math.round(dmg), o.bolt ? "#b8d0ff" : o.echo ? "#e6c88a" : dmg >= 30 ? "#ffd070" : "#fff6dc", dmg >= 30);
+    fxBurst(e.x, e.y, e.def.color || "#fff", o.strike ? 7 : 4, 190, { dir: hitDir, spark: true });
+    if (o.strike) { fxBurst(e.x, e.y, "#fff6dc", 3, 140, { dir: hitDir }); fxShake(3); fxFreeze(0.045); }
+    if ((o.strike || o.push) && !e.boss) {
+      const kb = o.push ? 260 : 210 / Math.max(0.8, e.r / 14);
+      e.kvx = Math.cos(hitDir) * kb; e.kvy = Math.sin(hitDir) * kb; e.stun = 0.14;
+    }
+  }
   if (e.hp <= 0) {
     e.dead = true;
     SFX.play("death");
+    fxBurst(e.x, e.y, e.def.color || "#fff", e.boss ? 60 : 16, e.boss ? 330 : 230, { size: e.boss ? 1.6 : 1.1, grav: 220 });
+    fxRing(e.x, e.y, e.r + 30, "rgba(255,246,220,.9)", e.boss ? 0.7 : 0.4);
+    fxShake(e.boss ? 14 : 5);
+    fxFreeze(e.boss ? 0.25 : 0.08);
     EX.kills++;
     G.flags.stat_kills = (G.flags.stat_kills || 0) + 1;
     const def = e.def;
     let wl = e.boss ? (def.wl || 6) : (e.elite ? 2 : 1);
     if (G.species === "fox") wl += 0;
-    expWl(wl + DATA.weather[G.weather].wlBonus + (G.activePet === "mothling" ? 1 : 0));
-    for (const [item, range] of Object.entries(def.drops || {})) {
-      const n = randInt(range[0], range[1]);
-      if (n > 0) expLoot(item, n);
+    if (!e.noLoot) {
+      expWl(wl + DATA.weather[G.weather].wlBonus + (G.activePet === "mothling" ? 1 : 0));
+      for (const [item, range] of Object.entries(def.drops || {})) {
+        const n = randInt(range[0], range[1]);
+        if (n > 0) expLoot(item, n);
+      }
     }
+    onEnemyKilled(e);
     if (e.kind === "bramblemaw") {
       setFlag("bramblemawDown");
       toast("The Bramblemaw collapses. A Shrine Charm is left behind.");
@@ -531,6 +586,8 @@ function damagePlayer(amount) {
   if (EX.curled) dmg *= 0.5;
   if (EX.buffs.thornArmor) dmg *= 0.75;
   if (EX.buffs.glowWard) dmg *= 0.85;
+  dmg *= relicTakenMul();
+  if (veilBlocks()) { EX.invuln = 0.4; EX.contactCd = 0.5; return; }
   if (G.equip.armor === "thornMail") dmg *= DATA.items.thornMail.dmgTake;
   dmg *= DATA.weather[G.weather].enemyDmg;
   const hit = Math.round(dmg);
@@ -546,6 +603,10 @@ function damagePlayer(amount) {
   G.hp -= hit;
   EX.contactCd = 0.5;
   EX.hitFlash = 1;
+  fxNumber(EX.px, EX.py - 28, "-" + hit, "#ff6a6a", hit >= 15);
+  fxBurst(EX.px, EX.py, "#d84a4a", 9, 200);
+  fxShake(7 + Math.min(hit, 20) * 0.3);
+  fxFreeze(0.06);
   SFX.play("hurt");
   if (G.hp <= 0) G.hp = 0;
 }
@@ -605,6 +666,8 @@ function interactExpPoint(p) {
       openDialogue("Treasure", "A cache of acorns and driftwood, half buried in moss.", []);
     }
     room.points = room.points.filter(q => q !== p);
+  } else if (p.kind === "altar") {
+    interactAltar(p);
   } else if (p.kind === "crossroads") {
     // A three-way choice: each path trades something different. The stone is spent on any choice.
     const region = DATA.regions[EX.region];
