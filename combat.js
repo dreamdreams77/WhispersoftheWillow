@@ -253,6 +253,7 @@ function startExpedition(regionId) {
   setDepthHazard();
   enterRoom(0);
   toast(`Entering ${region.name}.`);
+  showCard(region.name, REGION_SUBS[regionId] || "");
 }
 
 function enterRoom(i, fromDir) {
@@ -274,6 +275,7 @@ function enterRoom(i, fromDir) {
   if (room.type === "boss" && !room.cleared) {
     const bossDef = DATA.enemies[DATA.regions[EX.region].bossKind];
     toast(bossDef.intro || `The ${bossDef.name} stirs.`);
+    showCard(bossDef.name, "Guardian of " + DATA.regions[EX.region].name);
   }
 }
 
@@ -381,6 +383,7 @@ function stepExpedition(dt) {
     hurtEnemy(e, (hasRes("blazingClaws") ? 10 : 5) * dt);
   }
   stepBlasts(dt);
+  stepBossFx(dt);
   if (roomEnemiesAlive()) {
     for (const e of room.enemies) {
       if (e.dead) continue;
@@ -472,6 +475,7 @@ function updateEnemy(e, dt, room) {
   if (e.stun > 0) { e.stun -= dt; return; }
 
   if (e.boss) {
+    bossUpdate(e, dt);
     // Bramblemaw: wind up thorns, then charge toward the player's last position
     if (e.charge > 0) {
       e.charge -= dt;
@@ -484,7 +488,7 @@ function updateEnemy(e, dt, room) {
     } else {
       e.atkCd -= dt;
       e.x += (dxp / d) * 30 * dt; e.y += (dyp / d) * 30 * dt;
-      if (e.atkCd <= 0) { e.windup = 0.9; e.atkCd = 3.2; }
+      if (e.atkCd <= 0) { e.windup = 0.9; e.atkCd = 3.2 - 0.7 * ((e.phase || 1) - 1); }
     }
     return;
   }
@@ -765,6 +769,7 @@ function descendExpedition() {
   setDepthHazard();
   enterRoom(0);
   const hz = EX.hazard ? DATA.hazards[EX.hazard] : null;
+  showCard(`Depth ${EX.depth}`, region.name);
   toast(`Depth ${EX.depth} of ${region.maxDepth}: +${EX.depth} Willowlight. ${hz ? hz.name + ": " + hz.desc : "The air grows colder."}`);
 }
 

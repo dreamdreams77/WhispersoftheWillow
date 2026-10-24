@@ -186,7 +186,12 @@ function interact(p) {
     else if (p.game === "acorn") startAcornMemory();
     else if (p.game === "whack") startWhackAMole();
     else if (p.game === "ring") startRingToss();
+    else if (p.game === "fish") startFishing();
     else startFireflyCatch();
+  } else if (p.kind === "builder") {
+    openBuilder();
+  } else if (p.kind === "build") {
+    interactBuilding(p);
   } else if (p.kind === "carnival") {
     openCarnivalMenu();
   } else if (p.kind === "peddler") {
@@ -366,6 +371,7 @@ function talk(npcId) {
 
 // Villagers' schedules and spontaneous gifts
 function villageDaily() {
+  buildDaily();
   if (G.day % 5 === 0) {
     const gifts = Object.keys(DATA.villagers);
     const who = pick(gifts);
@@ -593,6 +599,7 @@ function drawVillage(ctx, cam, t) {
   drawRingPitch(ctx, 840, 745, t);
   drawGate(ctx, 830, 120, "Starfall Meadow", gateLock("starfall") ? "#2a3566" : "#9fb8ff", gateSub("starfall"));
   drawGate(ctx, 100, 330, "Corrupted Heartwood", gateLock("heartwood") ? "#4a2a40" : "#c76fd6", gateSub("heartwood"));
+  drawBuildings(ctx, t, add);
   stand.sort((p, q) => p.y - q.y).forEach(o => o.fn());
 
 

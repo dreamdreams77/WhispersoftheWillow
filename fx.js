@@ -59,6 +59,7 @@ function fxStep(dt) {
   FX.rings = FX.rings.filter(r => r.t < r.life);
   for (const g of FX.ghosts) g.t += dt;
   FX.ghosts = FX.ghosts.filter(g => g.t < 0.28);
+  if (typeof EX !== "undefined" && EX.card) { EX.card.t += dt; if (EX.card.t > EX.card.dur) EX.card = null; }
   for (const b of FX.bolts) b.t += dt;
   FX.bolts = FX.bolts.filter(b => b.t < b.life);
 }
@@ -208,7 +209,7 @@ function drawVillageLighting(ctx, cam, t) {
   if (G.weather === "moon") amb[3] = Math.max(amb[3], 0.35);
   if (G.weather === "storm") amb[3] = Math.max(amb[3], 0.28);
   if (amb[3] <= 0.01) return;
-  const lights = VIL_LIGHTS.map(([x, y, r, color], i) => ({ x: x - cam.x, y: y - cam.y, r: r * (1 + 0.04 * Math.sin(t * 5 + i * 1.7)), a: 0.85, color }));
+  const lights = VIL_LIGHTS.concat(buildLights()).map(([x, y, r, color], i) => ({ x: x - cam.x, y: y - cam.y, r: r * (1 + 0.04 * Math.sin(t * 5 + i * 1.7)), a: 0.85, color }));
   lights.push({ x: P.x - cam.x, y: P.y - 10 - cam.y, r: 150, a: 0.8, color: "255,226,170" });
   drawLighting(ctx, cam.vw, cam.vh, 0.5, amb, lights);
 }

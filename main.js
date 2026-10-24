@@ -49,6 +49,7 @@ const KONAMI = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRi
 const konamiBuf = [];
 window.addEventListener("keydown", e => {
   if (MG.active && (e.code === "Escape" || e.code === "KeyZ")) { e.preventDefault(); if (!e.repeat) endFireflyCatch(); return; }
+  if (FS.active && e.code === "Escape") { e.preventDefault(); if (!e.repeat) endFishing(); return; }
   if (SK.active && e.code === "Escape") { e.preventDefault(); if (!e.repeat) endStoneSkip(); return; }
   if (AM.active && e.code === "Escape") { e.preventDefault(); if (!e.repeat) endAcornMemory(); return; }
   if (WM.active && e.code === "Escape") { e.preventDefault(); if (!e.repeat) endWhackAMole(); return; }
@@ -93,7 +94,7 @@ window.addEventListener("keyup", e => {
 window.addEventListener("blur", () => { for (const k in INPUT) INPUT[k] = false; });
 
 function toggleMenu() {
-  if (MG.active || SK.active || AM.active || WM.active || RT.active || CV.active) return; // no menus while a mini-game runs
+  if (MG.active || SK.active || AM.active || WM.active || RT.active || CV.active || FS.active) return; // no menus while a mini-game runs
   if (G.menu) closeMenu(); else openMenu("satchel");
 }
 
@@ -137,6 +138,8 @@ function frame(now) {
 
   if (MG.active) {
     stepFireflyCatch(dt);
+  } else if (FS.active) {
+    stepFishing(dt);
   } else if (SK.active) {
     stepStoneSkip(dt);
   } else if (AM.active) {
@@ -239,6 +242,7 @@ function draw(t) {
     drawSeasonAir(ctx, t, CAM.vw, CAM.vh);
     drawScreenVignette(ctx, CAM.vw, CAM.vh, 0.45);
     if (MG.active) drawFireflyCatch(ctx, t, CAM.vw, CAM.vh);
+    else if (FS.active) drawFishing(ctx, t, CAM.vw, CAM.vh);
     else if (SK.active) drawStoneSkip(ctx, t, CAM.vw, CAM.vh);
     else if (AM.active) drawAcornMemory(ctx, t, CAM.vw, CAM.vh);
     else if (WM.active) drawWhackAMole(ctx, t, CAM.vw, CAM.vh);
@@ -276,7 +280,9 @@ function verbFor(p) {
   if (p.kind === "gate") return "Enter";
   if (p.kind === "rest") return "Rest at";
   if (p.kind === "shrine") return "Offer at";
-  if (p.kind === "minigame") return "Play at";
+  if (p.kind === "minigame") return p.game === "fish" ? "Fish from the" : "Play at";
+  if (p.kind === "builder") return "Read the";
+  if (p.kind === "build") return "Tend the";
   if (p.kind === "carnival") return "Visit";
   if (p.kind === "peddler") return "Trade with";
   if (p.kind === "well") return "Make a wish at";
@@ -386,6 +392,7 @@ function drawExpedition(ctx, t) {
   }
 
   drawBlasts(ctx, t);
+  drawBossFx(ctx, t);
   fxDrawGround(ctx, t);
 
   // enemies
@@ -455,7 +462,7 @@ function drawExpedition(ctx, t) {
 
   // gloom: darkness everywhere except a pool of light around the player
   if (EX.hazard === "gloom") {
-    const gl = ctx.createRadialGradient(EX.px, EX.py, 70, EX.px, EX.py, EX.buffs.keenEye ? 330 : 230);
+    const gl = ctx.createRadialGradient(EX.px, EX.py, 70, EX.px, EX.py, (EX.buffs.keenEye ? 330 : 230) * (built("lanterns") ? 1.25 : 1));
     gl.addColorStop(0, "rgba(4,10,12,0)");
     gl.addColorStop(1, "rgba(4,10,12,0.93)");
     ctx.fillStyle = gl;
@@ -479,6 +486,7 @@ function drawExpedition(ctx, t) {
       lights.push({ x: e.x, y: e.y, r: e.boss ? 190 : 70 + e.r, a: e.boss ? 0.7 : 0.45, color: `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}` });
     }
     for (const p of EX.projectiles) lights.push({ x: p.x, y: p.y, r: 70, a: 0.6, color: "255,200,120" });
+    for (const p of EX.eproj || []) lights.push({ x: p.x, y: p.y, r: 60, a: 0.6, color: "255,120,90" });
     for (const b of EX.blasts || []) lights.push({ x: b.x, y: b.y, r: b.r * 1.5, a: 0.7, color: "255,140,60" });
     if (EX.buffs.spiritWisp) lights.push({ x: EX.px + Math.cos(t * 2) * 30, y: EX.py + Math.sin(t * 2) * 20 - 26, r: 90, a: 0.6, color: "155,194,255" });
     const bg = region.bg[1], bn = parseInt(bg.slice(1), 16);
@@ -502,6 +510,9 @@ function drawExpedition(ctx, t) {
     lv.addColorStop(0, "rgba(160,10,20,0)"); lv.addColorStop(1, `rgba(160,10,20,${pulse})`);
     ctx.fillStyle = lv; ctx.fillRect(0, 0, CAM.vw, CAM.vh);
   }
+
+  drawBossBar(ctx, CAM.vw, CAM.vh);
+  drawCard(ctx, CAM.vw, CAM.vh);
 
   // HUD text. Wide screens: top-right block. Phones: a left column below the
   // health bars and objective, so it never runs into the Stamina bar.

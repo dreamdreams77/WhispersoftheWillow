@@ -23,7 +23,7 @@ RESONANCES.push(
 // Multipliers folded into strikes and into damage taken.
 function relicDamageMul() {
   const b = EX.buffs;
-  return (b.briarPact ? 1.4 : 1) * (b.glassAcorn ? 1.75 : 1) * (hasRes("recklessPact") ? 1.25 : 1);
+  return (b.briarPact ? 1.4 : 1) * (b.glassAcorn ? 1.75 : 1) * (hasRes("recklessPact") ? 1.25 : 1) * (built("training") ? 1.08 : 1);
 }
 function relicTakenMul() {
   const b = EX.buffs;
@@ -92,6 +92,8 @@ function onDodge() {
 // Called on entering a room.
 function onEnterRoom() {
   EX.blasts = [];
+  EX.slams = [];
+  EX.eproj = [];
   if (EX.buffs.dewVeil) EX.veil = true;
 }
 

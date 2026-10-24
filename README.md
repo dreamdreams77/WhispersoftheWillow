@@ -44,7 +44,7 @@ Each mini-game can be played once per village day, and earns Willowlight.
 - **Marigold's Cart**: a hedgehog peddler visits every third day (day 3, 6, 9 and so on) at the southern edge of the village. Buy ingredients with Willowlight, sell what you gather, or open a surprise parcel.
 - **Options and guide**: on the title screen and in the in-game menu. Volume slider and mute, save now, export your save to a file, import it back, and a two-tap reset. The How to Play guide is optional.
 - **Visible gear**: Thorn Mail, Lightning Claws and the Antler Spear show on your character.
-- **Deeds and ranks**: a menu tab with 23 gentle goals. Each pays a little Willowlight, once, and your rank rises as you earn them (Sproutling up to Friend of the Willow). Higher ranks pay more for errands and earn a discount from Marigold.
+- **Deeds and ranks**: a menu tab with 26 gentle goals. Each pays a little Willowlight, once, and your rank rises as you earn them (Sproutling up to Friend of the Willow). Higher ranks pay more for errands and earn a discount from Marigold.
 - **Errands**: read the Notice Board each day for a small errand from a villager. Bring them the item for Willowlight and friendship.
 - **Carnival Midway** (the striped tent near the Willow): five fairground games, one try each per day. **Acorn Gallery** (shooting gallery), **High Striker** (time the swing to ring the bell), **Hunt the Acorn** (follow the shells), **Duck Pond** (hook the ducks), **Berry Basket** (catch the harvest, dodge the burrs). Score in all five at least once to become Midway Champion.
 
@@ -58,6 +58,14 @@ Each mini-game can be played once per village day, and earns Willowlight.
 - **Relic Altar**: a new room type that offers three relics. Take one, or leave them for a little health.
 - **Elite modifiers**: elites are Shielded, Thorned, Volatile, Brooding or Frenzied, each with its own colored aura.
 
+## Bosses, building and fishing
+
+- **Boss phases**: every guardian has three phases. From two thirds health it adds telegraphed ground slams and thorn volleys. From one third it fights faster and summons help. A health bar with phase notches shows along the bottom.
+- **Title cards**: entering a region, a deeper floor or a boss room shows a title card.
+- **Builder's Board** (west of the Willow): spend materials and Willowlight to raise a **Fishing Dock**, **Garden Plot** (a seasonal crop each day), **Apiary** (honey each day), **Lantern Walk** (a quarter more light in the gloom) and **Training Post** (+8% strike damage).
+- **Fishing** (needs the Dock): six casts a day. Cast, wait for the bite, hook it, then hold Z to keep the marker in the gold zone. Season, hour and weather change what bites, from minnows to the Golden Koi.
+- **Cooking**: fish and honey make dishes at the Kitchen. Eat one from the Satchel for a blessing on your next expedition.
+
 ## Files
 
 - `index.html`: the page, with the title screen, HUD, menu and touch controls.
@@ -70,6 +78,9 @@ Each mini-game can be played once per village day, and earns Willowlight.
 - `options.js`: the volume slider, save export and import, reset, and the optional How to Play guide.
 - `fx.js`: particles, hit-stop and shake, the lighting layer, grass and seasonal air.
 - `relics2.js`: the new relics and resonances, the Relic Altar and elite modifiers.
+- `boss.js`: boss phases, the boss bar and title cards.
+- `fishing.js`: the fishing game, fish, honey and dishes.
+- `builds.js`: the Builder's Board and everything it raises.
 - `gear.js`: the armor and weapons drawn on the player, and their Satchel icons.
 - `gameart.js`: the shared look of the mini-games.
 - `audio.js`: sound effects.
