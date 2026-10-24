@@ -126,6 +126,15 @@ function renderSatchel(body) {
       b.onclick = () => { if (takeItem(k, 1)) { healPlayer(d.heal); toast(`Healed ${d.heal}`); renderMenu(); } };
       s.appendChild(b);
     }
+    if (d.blessing) {
+      const b = el("button", "ghost", "Eat");
+      b.style.marginTop = "4px";
+      b.onclick = () => {
+        if (G.flags.blessingPending) { toast("You are already carrying a blessing into your next expedition."); return; }
+        if (takeItem(k, 1)) { G.flags.blessingPending = d.blessing; toast(`${d.blessingName}: it will walk with you on your next expedition.`, 4500); renderMenu(); }
+      };
+      s.appendChild(b);
+    }
     if (d.equip) {
       const b = el("button", "ghost", G.equip[d.equip] === k ? "Unequip" : "Equip");
       b.style.marginTop = "4px";
