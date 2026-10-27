@@ -1,6 +1,7 @@
 // Entry point: loop, input, scene drawing.
 const canvas = document.getElementById("view");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { willReadFrequently: true });
+initPixel(ctx, canvas);
 const CAM = { x: 0, y: 0, vw: 0, vh: 0, scale: 1 };
 
 // On phones the map gets its own area above a solid control band, so the
@@ -14,11 +15,7 @@ function resize() {
   const band = controlBand();
   const h = window.innerHeight - band;
   document.documentElement.style.setProperty("--band", band + "px");
-  canvas.width = Math.floor(window.innerWidth * dpr);
-  canvas.height = Math.floor(h * dpr);
-  canvas.style.width = window.innerWidth + "px";
-  canvas.style.height = h + "px";
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sizePixelView(window.innerWidth, h, dpr);
   CAM.vw = window.innerWidth;
   CAM.vh = h;
 }
@@ -233,6 +230,7 @@ function drawWeather(ctx, t, w, h, weather) {
 }
 
 function draw(t) {
+  pixelBegin();
   ctx.clearRect(0, 0, CAM.vw, CAM.vh);
   if (G.scene === "village") {
     CAM.x = clamp(P.x - CAM.vw / 2, 0, Math.max(0, VIL.w - CAM.vw));
@@ -241,6 +239,8 @@ function draw(t) {
     drawVillageLighting(ctx, CAM, t);
     drawSeasonAir(ctx, t, CAM.vw, CAM.vh);
     drawScreenVignette(ctx, CAM.vw, CAM.vh, 0.45);
+    // a mini-game covers the village, so the village's queued labels must not show through
+    if (MG.active || SK.active || AM.active || WM.active || RT.active || CV.active || FS.active) PX.q.length = 0;
     if (MG.active) drawFireflyCatch(ctx, t, CAM.vw, CAM.vh);
     else if (FS.active) drawFishing(ctx, t, CAM.vw, CAM.vh);
     else if (SK.active) drawStoneSkip(ctx, t, CAM.vw, CAM.vh);
@@ -256,6 +256,7 @@ function draw(t) {
   } else {
     drawTitleBackdrop(t);
   }
+  pixelFinish();
 }
 
 function drawVillageOverlay(t) {
@@ -490,8 +491,8 @@ function drawExpedition(ctx, t) {
     for (const b of EX.blasts || []) lights.push({ x: b.x, y: b.y, r: b.r * 1.5, a: 0.7, color: "255,140,60" });
     if (EX.buffs.spiritWisp) lights.push({ x: EX.px + Math.cos(t * 2) * 30, y: EX.py + Math.sin(t * 2) * 20 - 26, r: 90, a: 0.6, color: "155,194,255" });
     const bg = region.bg[1], bn = parseInt(bg.slice(1), 16);
-    const dark = 0.42 + 0.07 * ((EX.depth || 1) - 1);
-    drawLighting(ctx, ROOM_W, ROOM_H, 0.5, [((bn >> 16) & 255) >> 2, ((bn >> 8) & 255) >> 2, (bn & 255) >> 2, Math.min(0.8, dark)], lights);
+    const dark = 0.3 + 0.05 * ((EX.depth || 1) - 1);
+    drawLighting(ctx, ROOM_W, ROOM_H, 0.5, [((bn >> 16) & 255) >> 2, ((bn >> 8) & 255) >> 2, (bn & 255) >> 2, Math.min(0.7, dark)], lights);
   }
   fxDrawTop(ctx, t);
 

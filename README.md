@@ -58,6 +58,10 @@ Each mini-game can be played once per village day, and earns Willowlight.
 - **Relic Altar**: a new room type that offers three relics. Take one, or leave them for a little health.
 - **Elite modifiers**: elites are Shielded, Thorned, Volatile, Brooding or Frenzied, each with its own colored aura.
 
+## Pixel-art look
+
+The whole game is drawn small and scaled up with hard edges, and every pixel is snapped to one shared palette (Resurrect 64 plus a few woodland tones) with an ordered dither, so soft gradients and lighting break into crisp bands. Text is drawn sharp on top in the Jersey 10 pixel font, which loads from Google Fonts (falling back to a plain sans-serif offline). The page's own panels and buttons use square corners and hard shadows to match. All of it lives in `pixel.js`, the `#overlay` canvas and the last block of `style.css`.
+
 ## Bosses, building and fishing
 
 - **Boss phases**: every guardian has three phases. From two thirds health it adds telegraphed ground slams and thorn volleys. From one third it fights faster and summons help. A health bar with phase notches shows along the bottom.
@@ -76,6 +80,7 @@ Each mini-game can be played once per village day, and earns Willowlight.
 - `carnival.js`: the Carnival Midway tent and its five games.
 - `deeds.js`: the Deeds list, ranks, daily errands and Marigold the peddler.
 - `options.js`: the volume slider, save export and import, reset, and the optional How to Play guide.
+- `pixel.js`: the low-resolution pixel renderer, palette snapping and sharp text overlay.
 - `fx.js`: particles, hit-stop and shake, the lighting layer, grass and seasonal air.
 - `relics2.js`: the new relics and resonances, the Relic Altar and elite modifiers.
 - `boss.js`: boss phases, the boss bar and title cards.
