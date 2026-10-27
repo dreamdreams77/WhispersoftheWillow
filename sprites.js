@@ -12,6 +12,7 @@ const SE = (cx, cy, rx, ry, c) => ({ t: "e", cx, cy, rx, ry, c });
 const SR = (x, y, w, h, c) => ({ t: "r", x, y, w, h, c });
 const SP = (pts, c) => ({ t: "p", pts, c });
 const SX = (x, y, c) => ({ t: "x", x, y, c });
+const SL = (x1, y1, x2, y2, th, c) => ({ t: "l", x1, y1, x2, y2, th, c });
 
 function inPoly(pts, x, y) {
   let inside = false;
@@ -24,17 +25,23 @@ function inPoly(pts, x, y) {
 
 // Shapes go on a grid in order. Key 'a' is the base colour and is shaded (light on top edges, dark
 // on bottom edges). Every empty pixel touching a filled one becomes the outline.
-function rasterise(w, h, shapes) {
+function rasterise(w, h, shapes, k, axp, ayp) {
+  // k is grid pixels per world unit and (axp, ayp) the grid pixel of the world origin; both default to a plain grid
+  k = k || 1; axp = axp || 0; ayp = ayp || 0;
   const g = new Array(w * h).fill(null);
   for (const s of shapes) {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const px = x + 0.5, py = y + 0.5;
+      const px = (x + 0.5 - axp) / k, py = (y + 0.5 - ayp) / k;
       let hit = false;
       if (s.t === "e") hit = ((px - s.cx) / s.rx) ** 2 + ((py - s.cy) / s.ry) ** 2 <= 1;
       else if (s.t === "r") hit = px >= s.x && px <= s.x + s.w && py >= s.y && py <= s.y + s.h;
       else if (s.t === "p") hit = inPoly(s.pts, px, py);
-      else hit = x === s.x && y === s.y;
-      if (hit) g[y * w + x] = s.c;
+      else if (s.t === "l") {
+        const dx = s.x2 - s.x1, dy = s.y2 - s.y1, len2 = dx * dx + dy * dy || 1;
+        const u = Math.max(0, Math.min(1, ((px - s.x1) * dx + (py - s.y1) * dy) / len2));
+        hit = Math.hypot(px - (s.x1 + dx * u), py - (s.y1 + dy * u)) <= Math.max(s.th / 2, 0.5 / k);
+      } else hit = Math.floor(s.x * k + axp) === x && Math.floor(s.y * k + ayp) === y;
+      if (hit) g[y * w + x] = s.c === undefined || s.c === null ? null : s.c;
     }
   }
   const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? null : g[y * w + x];
@@ -60,8 +67,8 @@ function shadeToHex(hex, f) {
   return "#" + c((n >> 16) & 255) + c((n >> 8) & 255) + c(n & 255);
 }
 
-function sprCanvas(w, h, shapes, base, pal, flip, white) {
-  const grid = rasterise(w, h, shapes), col = sprColors(base, pal);
+function sprCanvas(w, h, shapes, base, pal, flip, white, k, axp, ayp) {
+  const grid = rasterise(w, h, shapes, k, axp, ayp), col = sprColors(base, pal);
   const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
   const c = cv.getContext("2d");
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {

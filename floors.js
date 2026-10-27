@@ -4,7 +4,7 @@
 
 const FLOORS = {
   default:   { type: "moss",  tones: ["#2c4a2c", "#374e4a", "#2a3a3a"], hi: "#547e64", lo: "#1f3a2a", accent: ["#3f6a34", "#5f8a3c"], bloom: ["#f9c22b", "#f68181", "#8fd3ff"], wall: ["#3a2c22", "#4a3a2a", "#5a4630"], wallHi: "#7a5a3a" },
-  fernwood:  { type: "moss",  tones: ["#2c4a2c", "#374e4a", "#165a4c"], hi: "#6a8a5a", lo: "#1f3a2a", accent: ["#3f6a34", "#5f8a3c"], bloom: ["#8fd3ff", "#f68181", "#fbff86"], wall: ["#374e4a", "#2a3a3a", "#3f5a46"], wallHi: "#6a8a5a" },
+  fernwood:  { type: "moss",  tones: ["#2c4a2c", "#374e4a", "#2a3a3a"], hi: "#6a8a5a", lo: "#1f3a2a", accent: ["#3f6a34", "#5f8a3c"], bloom: ["#8fd3ff", "#f68181", "#fbff86"], wall: ["#374e4a", "#2a3a3a", "#3f5a46"], wallHi: "#6a8a5a" },
   thicket:   { type: "earth", tones: ["#4c3e24", "#4a3a2a", "#3a2c22"], hi: "#7a5a3a", lo: "#2a1e16", accent: ["#676633", "#676633"], bloom: ["#c32454", "#e6904e"], wall: ["#3a2c22", "#4a3a2a", "#2c2a24"], wallHi: "#7a5a3a" },
   hollows:   { type: "flag",  tones: ["#2a3a3a", "#313638", "#374e4a"], hi: "#547e64", lo: "#1c2a2a", accent: ["#0b8a8f", "#0eaf9b"], bloom: ["#30e1b9", "#8ff8e2"], wall: ["#2a3a3a", "#374e4a", "#313638"], wallHi: "#547e64" },
   marsh:     { type: "mud",   tones: ["#2c4a2c", "#374e4a", "#2a3a3a"], hi: "#547e64", lo: "#1f3a2a", accent: ["#3f6a34", "#3f6a34"], bloom: ["#cddf6c", "#fbff86"], water: "#0b5e65", waterHi: "#0b8a8f", wall: ["#374e4a", "#2c4a2c", "#313638"], wallHi: "#547e64" },

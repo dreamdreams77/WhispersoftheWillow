@@ -67,6 +67,8 @@ The whole game is drawn small and scaled up with hard edges, and every pixel is 
 - **Pixel sprites** (`sprites.js`): the eight animals (player species and villagers) and the enemy families are built from small shape lists on a grid, then given a dark outline and top-lit shading automatically. They are recoloured from a base colour, show your worn armor and weapons, and are drawn one sprite pixel per art pixel. Bosses are drawn at double size.
 - **Expedition floors** (`floors.js`): every room gets its own floor baked at the exact art resolution from the region's palette. Flagstone for the Hollows, Grove, Heartwood and Catacombs, dithered noise terrain for the soil, moss and mud regions, plus pebbles, tufts, flowers and puddles. Walls are staggered bricks in the region's stone.
 
+- **Pixel props** (`props.js`): trees, huts, the well, notice board, scarecrow, flower beds, lamps, shrine, gates, the Midway tent, the lighthouse, the peddler's cart, gathering bushes, companions and the things found in expedition rooms (altar, chest, shrine, signpost, portals) are drawn from shape lists at the current art-pixel scale, so their proportions hold on every screen while outlines stay one pixel wide. The village ground is a dithered noise terrain painted at the exact art resolution.
+
 ## Bosses, building and fishing
 
 - **Boss phases**: every guardian has three phases. From two thirds health it adds telegraphed ground slams and thorn volleys. From one third it fights faster and summons help. A health bar with phase notches shows along the bottom.
@@ -86,6 +88,7 @@ The whole game is drawn small and scaled up with hard edges, and every pixel is 
 - `deeds.js`: the Deeds list, ranks, daily errands and Marigold the peddler.
 - `options.js`: the volume slider, save export and import, reset, and the optional How to Play guide.
 - `sprites.js`: the pixel sprites for animals, villagers and enemies.
+- `props.js`: pixel props for the village and expedition rooms, and the village grass.
 - `floors.js`: the baked pixel floors and brick walls for expeditions.
 - `pixel.js`: the low-resolution pixel renderer, palette snapping and sharp text overlay.
 - `fx.js`: particles, hit-stop and shake, the lighting layer, grass and seasonal air.

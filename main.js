@@ -351,11 +351,7 @@ function drawExpedition(ctx, t) {
   // nodes
   for (const n of room.nodes) {
     if (!n.alive) continue;
-    const c = DATA.items[n.item] ? DATA.items[n.item].color : "#fff";
-    ctx.fillStyle = "rgba(0,0,0,.3)";
-    ctx.beginPath(); ctx.ellipse(n.x, n.y + 8, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = c;
-    ctx.beginPath(); ctx.arc(n.x, n.y, 9, 0, Math.PI * 2); ctx.fill();
+    drawNodeSprite(ctx, n.x, n.y, DATA.items[n.item] ? DATA.items[n.item].color : "#ffffff");
   }
 
   // points
@@ -363,6 +359,7 @@ function drawExpedition(ctx, t) {
     const pulse = 0.5 + 0.5 * Math.sin(t * 3);
     ctx.fillStyle = p.kind === "exit" && p.locked ? "rgba(120,60,60,.5)" : p.kind === "altar" ? `rgba(255,214,120,${0.35 + 0.3 * pulse})` : `rgba(200,255,220,${0.3 + 0.3 * pulse})`;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    drawExpPointSprite(ctx, p, t);
     ctx.fillStyle = "#fff6dc";
     ctx.font = "13px Georgia";
     ctx.textAlign = "center";
@@ -425,10 +422,8 @@ function drawExpedition(ctx, t) {
 
   // projectiles
   for (const p of EX.projectiles) {
-    ctx.fillStyle = "rgba(0,0,0,.25)";
-    ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 6, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = p.dmg >= 30 ? "#8b5a2b" : "#fff6dc";
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.dmg >= 30 ? 9 : 4, 0, Math.PI * 2); ctx.fill();
+    spriteShadow(ctx, p.x, p.y + 12, p.dmg >= 30 ? 8 : 5);
+    pixDot(ctx, p.x, p.y, p.dmg >= 30 ? 6 : 3, p.dmg >= 30 ? "#8a6a4a" : "#fff6dc");
   }
 
   // wisp

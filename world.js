@@ -237,32 +237,6 @@ function gateLock(id) {
   return g.open() ? null : g.msg;
 }
 
-function drawPetSprite(ctx, x, y, id, t) {
-  const pet = DATA.pets[id];
-  if (!pet) return;
-  const bob = Math.sin(t * 4) * 1.5;
-  ctx.fillStyle = "rgba(0,0,0,.25)";
-  ctx.beginPath(); ctx.ellipse(x, y + 9, 6, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-  if (id === "mothling") {
-    const halo = ctx.createRadialGradient(x, y + bob, 1, x, y + bob, 12);
-    halo.addColorStop(0, "rgba(207,232,255,.5)");
-    halo.addColorStop(1, "rgba(207,232,255,0)");
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(x, y + bob, 12, 0, Math.PI * 2); ctx.fill();
-  }
-  if (id === "cinderkit") {
-    const glow = ctx.createRadialGradient(x, y + bob, 1, x, y + bob, 13);
-    glow.addColorStop(0, "rgba(255,160,80,.45)");
-    glow.addColorStop(1, "rgba(255,160,80,0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(x, y + bob, 13, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.fillStyle = pet.color;
-  ctx.beginPath(); ctx.arc(x, y + bob, 5.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#1e140c";
-  ctx.beginPath(); ctx.arc(x - 2, y - 1 + bob, 1, 0, Math.PI * 2); ctx.arc(x + 2, y - 1 + bob, 1, 0, Math.PI * 2); ctx.fill();
-}
-
 function talk(npcId) {
   const v = DATA.villagers[npcId];
   if (!v) return;
@@ -404,30 +378,18 @@ function drawTrail(g, x0, y0, cx, cy, x1, y1, w, rnd) {
   }
 }
 
-let VIL_TEX = null;
-function buildVillageTexture() {
+let VIL_TEX = null, VIL_A = 0;
+function buildVillageTexture(a) {
   const c = document.createElement("canvas");
-  c.width = VIL.w; c.height = VIL.h;
+  c.width = Math.ceil(VIL.w * a); c.height = Math.ceil(VIL.h * a);
   const g = c.getContext("2d");
   let seed = 1337;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
-  // base: sky-tinted gradient, then soft mottling of light and dark grass
-  const base = g.createLinearGradient(0, 0, 0, VIL.h);
-  base.addColorStop(0, "#3a5e3e");
-  base.addColorStop(0.6, "#41703f");
-  base.addColorStop(1, "#33593a");
-  g.fillStyle = base;
-  g.fillRect(0, 0, VIL.w, VIL.h);
-  for (let i = 0; i < 260; i++) {
-    const x = rnd() * VIL.w, y = rnd() * VIL.h, r = 40 + rnd() * 90;
-    const grd = g.createRadialGradient(x, y, 0, x, y, r);
-    const light = rnd() < 0.45;
-    grd.addColorStop(0, light ? "rgba(150,196,100,.16)" : "rgba(20,44,28,.18)");
-    grd.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = grd;
-    g.fillRect(x - r, y - r, r * 2, r * 2);
-  }
+  paintGrassTerrain(g, c.width, c.height, a, rnd);
+  g.scale(a, a);
+  const lwd = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "lineWidth");
+  Object.defineProperty(g, "lineWidth", { get() { return lwd.get.call(this); }, set(v) { lwd.set.call(this, Math.max(v, 1 / a)); } });
 
   // grass tufts: little three-blade clumps in several greens
   const greens = ["#5f8f48", "#7ba65a", "#2f5a34", "#8dbb6a"];
@@ -528,8 +490,9 @@ function drawVillage(ctx, cam, t) {
   ctx.translate(-cam.x, -cam.y);
 
   // painted ground (grass, flowers, cobbled path), built once and reused
-  if (!VIL_TEX) VIL_TEX = buildVillageTexture();
-  ctx.drawImage(VIL_TEX, 0, 0);
+  const va = ctx.getTransform().a;
+  if (!VIL_TEX || VIL_A !== va) { VIL_TEX = buildVillageTexture(va); VIL_A = va; }
+  blitSprite(ctx, VIL_TEX, 0, 0, 0, 0);
 
   // dappled light through the canopy
   drawDappledLight(ctx, t);
@@ -575,13 +538,7 @@ function drawVillage(ctx, cam, t) {
   // gather nodes
   for (const n of WORLD.nodes) {
     if (!n.alive) continue;
-    const color = DATA.items[n.item] ? DATA.items[n.item].color : "#fff";
-    ctx.fillStyle = "#2a4a24";
-    ctx.beginPath(); ctx.ellipse(n.x, n.y + 6, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(n.x, n.y - 4, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.4)";
-    ctx.stroke();
+    drawNodeSprite(ctx, n.x, n.y - 2, DATA.items[n.item] ? DATA.items[n.item].color : "#ffffff");
   }
 
   // gate & points
@@ -613,95 +570,6 @@ function shadeHex(hex, f) {
   const n = parseInt(hex.slice(1), 16);
   const c = v => Math.max(0, Math.min(255, Math.round(v * f)));
   return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
-}
-
-function drawTree(ctx, x, y, r) {
-  // trunk and ground shadow
-  ctx.fillStyle = "rgba(0,0,0,.25)";
-  ctx.beginPath(); ctx.ellipse(x + 6, y + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#4a3122";
-  ctx.fillRect(x - 6, y + r * 0.1, 12, r * 0.7);
-  // layered canopy: dark base, mid, then a lit crown offset toward the light
-  const layers = [
-    { dx: 0, dy: 0, k: 1.0, c: "#22391f" },
-    { dx: -r * 0.2, dy: -r * 0.12, k: 0.78, c: "#2f4f2a" },
-    { dx: r * 0.12, dy: -r * 0.28, k: 0.52, c: "#4a7a3b" },
-  ];
-  for (const L of layers) {
-    const g = ctx.createRadialGradient(x + L.dx - r * 0.2, y + L.dy - r * 0.2, 2, x + L.dx, y + L.dy, r * L.k);
-    g.addColorStop(0, shadeHex(L.c, 1.25));
-    g.addColorStop(1, L.c);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x + L.dx, y + L.dy, r * L.k, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(8,18,8,.38)"; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-  // soft shade on the lower-right of the crown
-  const crownShade = ctx.createRadialGradient(x + r * 0.35, y + r * 0.4, r * 0.2, x + r * 0.2, y + r * 0.1, r * 1.05);
-  crownShade.addColorStop(0, "rgba(0,0,0,0)");
-  crownShade.addColorStop(1, "rgba(0,12,0,.28)");
-  ctx.fillStyle = crownShade;
-  ctx.beginPath(); ctx.arc(x, y, r * 1.0, 0, Math.PI * 2); ctx.fill();
-  // a few lit leaves
-  ctx.fillStyle = "rgba(180,230,140,.35)";
-  for (let i = 0; i < 6; i++) {
-    const a = i * 1.1 + x * 0.01;
-    ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * r * 0.4 - r * 0.1, y - r * 0.35 + Math.sin(a) * r * 0.25, 4, 2, a, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-function drawHut(ctx, x, y, color, name) {
-  const t = WORLD.time;
-  // ground shadow
-  ctx.fillStyle = "rgba(0,0,0,.28)";
-  ctx.beginPath(); ctx.ellipse(x + 6, y + 56, 60, 15, 0, 0, Math.PI * 2); ctx.fill();
-  // walls with a light-to-shadow falloff
-  const wall = ctx.createLinearGradient(x - 46, y, x + 46, y + 44);
-  wall.addColorStop(0, shadeHex(color, 1.2));
-  wall.addColorStop(1, shadeHex(color, 0.65));
-  ctx.fillStyle = wall;
-  ctx.beginPath(); ctx.ellipse(x, y + 24, 46, 32, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "rgba(20,12,4,.45)"; ctx.lineWidth = 1.5; ctx.stroke();
-  // timber ribs
-  ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = 2;
-  for (let i = -2; i <= 2; i++) {
-    ctx.beginPath(); ctx.moveTo(x + i * 16, y + 4); ctx.lineTo(x + i * 18, y + 46); ctx.stroke();
-  }
-  // thatched dome roof
-  const roof = ctx.createRadialGradient(x - 14, y - 18, 6, x, y - 4, 60);
-  roof.addColorStop(0, "#e3c07a");
-  roof.addColorStop(1, "#7a5629");
-  ctx.fillStyle = roof;
-  ctx.beginPath(); ctx.ellipse(x, y + 8, 54, 40, 0, Math.PI, Math.PI * 2); ctx.lineTo(x + 54, y + 12); ctx.lineTo(x - 54, y + 12); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "rgba(60,36,12,.35)"; ctx.lineWidth = 1.5;
-  for (let i = 1; i <= 4; i++) {
-    const r = 54 * (i / 5);
-    ctx.beginPath(); ctx.ellipse(x, y + 8, r, 40 * (i / 5), 0, Math.PI, Math.PI * 2); ctx.stroke();
-  }
-  // round window and warm door glow
-  const pulse = 0.65 + 0.35 * Math.sin(t * 2 + x * 0.01);
-  const glow = ctx.createRadialGradient(x, y + 30, 2, x, y + 30, 44);
-  glow.addColorStop(0, `rgba(255,214,130,${0.5 * pulse})`);
-  glow.addColorStop(1, "rgba(255,214,130,0)");
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(x, y + 30, 44, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#2a1b10";
-  ctx.beginPath(); ctx.moveTo(x - 8, y + 44); ctx.lineTo(x - 8, y + 26); ctx.arc(x, y + 26, 8, Math.PI, 0); ctx.lineTo(x + 8, y + 44); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = `rgba(255,220,140,${0.7 * pulse})`;
-  ctx.beginPath(); ctx.arc(x, y + 14, 4, 0, Math.PI * 2); ctx.fill();
-  // chimney smoke
-  for (let i = 0; i < 3; i++) {
-    const k = ((t * 0.25 + i / 3) % 1);
-    ctx.fillStyle = `rgba(230,225,215,${0.35 * (1 - k)})`;
-    ctx.beginPath(); ctx.arc(x + 28 + k * 10, y - 26 - k * 46, 5 + k * 8, 0, Math.PI * 2); ctx.fill();
-  }
-  // name plate
-  ctx.font = "13px Georgia";
-  ctx.textAlign = "center";
-  const w = ctx.measureText(name).width + 14;
-  ctx.fillStyle = "rgba(20,26,18,.6)";
-  ctx.fillRect(x - w / 2, y - 52, w, 20);
-  ctx.fillStyle = "#fff6dc";
-  ctx.fillText(name, x, y - 37);
 }
 
 // The Great Willow: a flared trunk that forks into limbs, dark twigs fanning up into a broad dome of
@@ -1061,23 +929,6 @@ function gateSub(id) {
   return best ? `Deepest: ${best}/${r.maxDepth}` : "Unexplored";
 }
 
-// Gate arch with its label above it on a dark plate, so touch controls never cover it
-function drawGate(ctx, x, y, name, color, sub) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(x, y, 34, Math.PI, 0); ctx.stroke();
-  ctx.font = "13px Georgia";
-  ctx.textAlign = "center";
-  const lines = sub ? [name, sub] : [name];
-  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
-  const h = 18 * lines.length + 8;
-  const top = y - 44 - h;
-  ctx.fillStyle = "rgba(20,26,18,.7)";
-  ctx.fillRect(x - w / 2, top, w, h);
-  ctx.fillStyle = "#fff6dc";
-  lines.forEach((l, i) => ctx.fillText(l, x, top + 18 + i * 18));
-}
-
 // Body plans. Everyone is drawn in profile facing right (mirrored by facing); the owl faces front.
 // bx/by/brx/bry: body ellipse. hx/hy/hr: head. sn: snout length, sr: snout half height.
 // fx: leg x positions [near front, far front, near back, far back], null to skip a leg.
@@ -1106,34 +957,6 @@ function drawMotes(ctx, t, cx, cy, spread) {
     ctx.fillStyle = `rgba(255,255,205,${0.5 + 0.5 * p})`;
     ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2); ctx.fill();
   }
-}
-
-// ---- Spirit shrine ----
-function drawShrine(ctx, x, y) {
-  const awake = willowOwned("spiritbond");
-  const t = WORLD.time;
-  ctx.fillStyle = "rgba(0,0,0,.28)";
-  ctx.beginPath(); ctx.ellipse(x + 4, y + 22, 26, 8, 0, 0, Math.PI * 2); ctx.fill();
-  const stone = ctx.createLinearGradient(x - 14, y, x + 14, y);
-  stone.addColorStop(0, awake ? "#8a8fa6" : "#4a4a52");
-  stone.addColorStop(1, awake ? "#4a4e60" : "#2a2a30");
-  ctx.fillStyle = stone;
-  ctx.beginPath(); ctx.moveTo(x - 14, y + 20); ctx.lineTo(x - 10, y - 22); ctx.lineTo(x + 10, y - 22); ctx.lineTo(x + 14, y + 20); ctx.closePath(); ctx.fill();
-  if (awake) {
-    const g = ctx.createRadialGradient(x, y - 26, 2, x, y - 26, 34 + Math.sin(t * 2) * 3);
-    g.addColorStop(0, "rgba(200,170,255,.6)");
-    g.addColorStop(1, "rgba(200,170,255,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y - 26, 34, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.font = "13px Georgia";
-  ctx.textAlign = "center";
-  const label = "Spirit Shrine";
-  const w = ctx.measureText(label).width + 14;
-  ctx.fillStyle = "rgba(20,26,18,.6)";
-  ctx.fillRect(x - w / 2, y - 60, w, 19);
-  ctx.fillStyle = "#fff6dc";
-  ctx.fillText(label, x, y - 46);
 }
 
 function openShrine() {
