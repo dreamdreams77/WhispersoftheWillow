@@ -68,6 +68,7 @@ The whole game is drawn small and scaled up with hard edges, and every pixel is 
 - **Expedition floors** (`floors.js`): every room gets its own floor baked at the exact art resolution from the region's palette. Flagstone for the Hollows, Grove, Heartwood and Catacombs, dithered noise terrain for the soil, moss and mud regions, plus pebbles, tufts, flowers and puddles. Walls are staggered bricks in the region's stone.
 
 - **The Willow, water and builds**: the Great Willow is painted at the exact art resolution and its strands sway in whole-pixel steps. Ponds, the creek, the stump, mole hills, ring pitch and everything the Builder's Board raises are pixel sprites too.
+- **Mini-games and the Midway** (`gamesprites.js`): flat banded skies with stepped skylines, and pixel sprites for the ducks, fruit, cups, targets, pegs, stump, jar, fish and the rest. The Midway at night has a pixel moon, stars, lanterns and curtains.
 - **Pixel props** (`props.js`): trees, huts, the well, notice board, scarecrow, flower beds, lamps, shrine, gates, the Midway tent, the lighthouse, the peddler's cart, gathering bushes, companions and the things found in expedition rooms (altar, chest, shrine, signpost, portals) are drawn from shape lists at the current art-pixel scale, so their proportions hold on every screen while outlines stay one pixel wide. The village ground is a dithered noise terrain painted at the exact art resolution.
 
 ## Bosses, building and fishing
@@ -89,6 +90,7 @@ The whole game is drawn small and scaled up with hard edges, and every pixel is 
 - `deeds.js`: the Deeds list, ranks, daily errands and Marigold the peddler.
 - `options.js`: the volume slider, save export and import, reset, and the optional How to Play guide.
 - `sprites.js`: the pixel sprites for animals, villagers and enemies.
+- `gamesprites.js`: backdrops and sprites for the mini-games and the carnival.
 - `props.js`: pixel props for the village and expedition rooms, and the village grass.
 - `floors.js`: the baked pixel floors and brick walls for expeditions.
 - `pixel.js`: the low-resolution pixel renderer, palette snapping and sharp text overlay.

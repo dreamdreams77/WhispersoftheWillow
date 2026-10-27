@@ -8,39 +8,6 @@ const GAME_THEMES = {
   ring:   { top: "#26384f", bottom: "#4b6a46", glow: "rgba(255,230,160,.25)", tree: "#18281f", mote: "255,240,200" },
 };
 
-function drawGameBackdrop(ctx, w, h, t, theme) {
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, theme.top); g.addColorStop(1, theme.bottom);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-
-  // a soft light behind the middle of the screen
-  const gl = ctx.createRadialGradient(w * 0.5, h * 0.4, 10, w * 0.5, h * 0.4, Math.max(w, h) * 0.6);
-  gl.addColorStop(0, theme.glow); gl.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = gl; ctx.fillRect(0, 0, w, h);
-
-  // a distant tree line, gently uneven
-  ctx.fillStyle = theme.tree;
-  ctx.beginPath(); ctx.moveTo(0, h);
-  for (let x = 0; x <= w; x += 18) {
-    const y = h * 0.2 + Math.sin(x * 0.021) * h * 0.04 + Math.sin(x * 0.067 + 1.3) * h * 0.02;
-    ctx.lineTo(x, y);
-  }
-  ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
-
-  // motes drifting through the air
-  for (let i = 0; i < 24; i++) {
-    const x = (i * 97 + t * (8 + (i % 5) * 3)) % w;
-    const y = h * 0.15 + ((i * 53) % (h * 0.7)) + Math.sin(t + i) * 6;
-    ctx.fillStyle = `rgba(${theme.mote},${0.15 + 0.15 * Math.sin(t * 2 + i)})`;
-    ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // darker corners, so the middle of the play area reads first
-  const v = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
-  v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.55)");
-  ctx.fillStyle = v; ctx.fillRect(0, 0, w, h);
-}
-
 // On a phone there is no keyboard, so the hints name the on-screen buttons instead.
 const GAME_TOUCH = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 function touchText(str) {
