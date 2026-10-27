@@ -110,28 +110,3 @@ function drawStoneSkip(ctx, t, w, h) {
   ctx.textAlign = "left";
 }
 
-// The creek in the village: a long, slow ribbon of water with glints.
-function drawCreek(ctx, x, y, t) {
-  const water = ctx.createLinearGradient(x - 110, y, x + 110, y);
-  water.addColorStop(0, "rgba(60,120,150,.8)");
-  water.addColorStop(0.5, "rgba(90,170,190,.9)");
-  water.addColorStop(1, "rgba(40,90,110,.8)");
-  ctx.fillStyle = water;
-  ctx.beginPath(); ctx.ellipse(x, y, 110, 26, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "rgba(200,240,255,.35)"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(x, y, 110, 26, 0, 0, Math.PI * 2); ctx.stroke();
-  for (let i = 0; i < 5; i++) {
-    const px = x + Math.cos(t * 0.5 + i * 1.3) * 80, py = y + Math.sin(t * 0.7 + i * 1.3) * 12;
-    ctx.fillStyle = `rgba(230,250,255,${0.3 + 0.25 * Math.sin(t * 3 + i)})`;
-    ctx.beginPath(); ctx.ellipse(px, py, 6, 1.6, 0, 0, Math.PI * 2); ctx.fill();
-  }
-  // a glint drifting along the creek
-  const gx = x + Math.sin(t * 0.35) * 70, gy = y + Math.cos(t * 0.35) * 8;
-  ctx.fillStyle = "rgba(230,250,255,.22)";
-  ctx.beginPath(); ctx.ellipse(gx, gy, 16, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-  // a few flat stones on the bank
-  ctx.fillStyle = "rgba(90,80,70,.9)";
-  for (const [sx, sy] of [[x - 112, y + 16], [x - 102, y + 22], [x + 116, y - 12]]) {
-    ctx.beginPath(); ctx.ellipse(sx, sy, 6, 4, 0.2, 0, Math.PI * 2); ctx.fill();
-  }
-}

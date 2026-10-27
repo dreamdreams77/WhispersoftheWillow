@@ -67,6 +67,7 @@ The whole game is drawn small and scaled up with hard edges, and every pixel is 
 - **Pixel sprites** (`sprites.js`): the eight animals (player species and villagers) and the enemy families are built from small shape lists on a grid, then given a dark outline and top-lit shading automatically. They are recoloured from a base colour, show your worn armor and weapons, and are drawn one sprite pixel per art pixel. Bosses are drawn at double size.
 - **Expedition floors** (`floors.js`): every room gets its own floor baked at the exact art resolution from the region's palette. Flagstone for the Hollows, Grove, Heartwood and Catacombs, dithered noise terrain for the soil, moss and mud regions, plus pebbles, tufts, flowers and puddles. Walls are staggered bricks in the region's stone.
 
+- **The Willow, water and builds**: the Great Willow is painted at the exact art resolution and its strands sway in whole-pixel steps. Ponds, the creek, the stump, mole hills, ring pitch and everything the Builder's Board raises are pixel sprites too.
 - **Pixel props** (`props.js`): trees, huts, the well, notice board, scarecrow, flower beds, lamps, shrine, gates, the Midway tent, the lighthouse, the peddler's cart, gathering bushes, companions and the things found in expedition rooms (altar, chest, shrine, signpost, portals) are drawn from shape lists at the current art-pixel scale, so their proportions hold on every screen while outlines stay one pixel wide. The village ground is a dithered noise terrain painted at the exact art resolution.
 
 ## Bosses, building and fishing

@@ -155,21 +155,3 @@ function drawRingToss(ctx, t, w, h) {
   ctx.textAlign = "left";
 }
 
-// The pegs and rope on the green in the village: a ring of stakes with a rope between them.
-function drawRingPitch(ctx, x, y, t) {
-  ctx.fillStyle = "rgba(0,0,0,.22)";
-  ctx.beginPath(); ctx.ellipse(x + 4, y + 10, 40, 12, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "#e8d9a8"; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.ellipse(x, y + 4, 26, 8, 0, 0, Math.PI * 2); ctx.stroke();
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-    const px = x + Math.cos(a) * 26 * 0.5 + (i === 0 ? 0 : 0), py = y + 4 + Math.sin(a) * 4;
-    ctx.fillStyle = "#8a6a44"; ctx.fillRect(px - 2, py - 8, 4, 10);
-    ctx.fillStyle = i === 0 ? "#ffd27a" : "#d9b77c";
-    ctx.beginPath(); ctx.ellipse(px, py - 8, 3, 1.4, 0, 0, Math.PI * 2); ctx.fill();
-  }
-  // a ring lying by the stakes, catching the light
-  const glint = 0.5 + 0.3 * Math.sin(t * 2);
-  ctx.strokeStyle = `rgba(255,210,122,${glint})`; ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.ellipse(x + 30, y + 10, 6, 3, 0, 0, Math.PI * 2); ctx.stroke();
-}

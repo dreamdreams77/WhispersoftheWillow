@@ -170,23 +170,3 @@ function drawWhackAMole(ctx, t, w, h) {
   ctx.textAlign = "left";
 }
 
-// The mole hills in the village: three soft mounds with a little dirt around them.
-function drawMoleHills(ctx, x, y, t) {
-  const mounds = [[-34, 4, 18], [0, -6, 22], [34, 6, 16]];
-  for (const [dx, dy, r] of mounds) {
-    ctx.fillStyle = "rgba(0,0,0,.25)";
-    ctx.beginPath(); ctx.ellipse(x + dx + 3, y + dy + 6, r, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
-    const g = ctx.createRadialGradient(x + dx - 4, y + dy - 4, 2, x + dx, y + dy, r);
-    g.addColorStop(0, "#8a6a4a"); g.addColorStop(1, "#4a3424");
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.ellipse(x + dx, y + dy, r, r * 0.7, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#1a1008";
-    ctx.beginPath(); ctx.ellipse(x + dx, y + dy - r * 0.2, r * 0.35, r * 0.18, 0, 0, Math.PI * 2); ctx.fill();
-  }
-  // a mole peeking out of the middle hill, bobbing
-  const bob = Math.sin(t * 2.2) * 1.5;
-  ctx.fillStyle = "#6e4f3f";
-  ctx.beginPath(); ctx.ellipse(x, y - 14 + bob, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#fff";
-  ctx.beginPath(); ctx.arc(x - 2, y - 15 + bob, 1.2, 0, Math.PI * 2); ctx.arc(x + 2, y - 15 + bob, 1.2, 0, Math.PI * 2); ctx.fill();
-}

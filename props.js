@@ -298,3 +298,120 @@ function paintGrassTerrain(g, w, h, a, rnd) {
   }
   g.putImageData(new ImageData(new Uint8ClampedArray(buf.buffer), w, h), 0, 0);
 }
+
+// ---------- water, as flat basins with a muddy bank ----------
+function drawBasin(ctx, x, y, rx, ry, t, o) {
+  o = o || {};
+  spriteShadow(ctx, x + 2, y + ry * 0.2, rx + 2);
+  drawProp(ctx, `basin${rx}x${ry}${o.pads ? "p" : ""}${o.stones ? "s" : ""}`, x, y, [rx + 8, ry + 8, rx + 8, ry + 24], () => {
+    const sh = [SE(0, 2, rx + 5, ry + 4, "#4a3a2a"), SE(0, 0, rx + 2, ry + 1.5, C.woodD), SE(0, 0, rx, ry, "#0b5e65"), SE(0, 1, rx * 0.88, ry * 0.8, C.water),
+      SE(-rx * 0.2, -ry * 0.3, rx * 0.5, ry * 0.28, "#30a8b0"), SE(-rx * 0.28, -ry * 0.42, rx * 0.22, ry * 0.1, "#8ff8e2")];
+    if (o.pads) for (const [px, py] of [[0.44, 0.2], [-0.52, -0.25], [0.1, -0.55]]) sh.push(SE(rx * px, ry * py, 9, 5, C.leafM), SE(rx * px - 1, ry * py - 1, 4, 2, C.leafL));
+    if (o.stones) for (const [px, py] of [[-1.02, 0.6], [-0.93, 0.85], [1.04, -0.45]]) sh.push(SE(rx * px, ry * py, 6, 4, C.stone), SE(rx * px - 1, ry * py - 1, 3, 1.5, C.stoneL));
+    for (let i = 0; i < 7; i++) {
+      const a = 0.35 + i * 0.4, rxp = Math.cos(a) * (rx + 2), ryp = Math.sin(a) * (ry + 1);
+      sh.push(SL(rxp, ryp, rxp + (i % 2 ? 2 : -2), ryp - 15, 1.6, C.leafM), SE(rxp + (i % 2 ? 2 : -2), ryp - 16, 1.6, 3.4, "#7a5a3a"));
+    }
+    return sh;
+  });
+  for (let i = 0; i < 4; i++) {
+    const px = x + Math.cos(t * 0.5 + i * 1.7) * rx * 0.55, py = y + Math.sin(t * 0.7 + i * 1.7) * ry * 0.4;
+    if (Math.sin(t * 2.6 + i * 2) > -0.2) pixDot(ctx, px, py, 2, "#8ff8e2");
+  }
+  const gx = x + Math.sin(t * 0.4) * rx * 0.45, gy = y + Math.cos(t * 0.4) * ry * 0.3;
+  pixDot(ctx, gx, gy, 3, "rgba(230,250,255,.5)");
+}
+function drawPond(ctx, x, y, t) { drawBasin(ctx, x, y, 58, 36, t, {}); }
+function drawCreek(ctx, x, y, t) { drawBasin(ctx, x, y, 110, 26, t, { stones: true }); }
+function drawNorthPond(ctx, t) { drawBasin(ctx, 300, 160, 92, 47, t, { pads: true }); }
+
+// ---------- the small village games ----------
+function drawAcornStump(ctx, x, y, t) {
+  spriteShadow(ctx, x + 4, y + 16, 26);
+  drawProp(ctx, "stump", x, y, [28, 28, 28, 24], () => [
+    SR(-22, 0, 44, 14, "a"), SE(0, 14, 22, 8, "a"), SE(0, 0, 22, 12, "#c9a06a"), SE(0, 0, 15, 8, C.strawD), SE(0, 0, 9, 5, "#c9a06a"), SE(0, 0, 3.5, 2, C.strawD),
+    SL(-12, 6, -12, 16, 1, "c"), SL(0, 8, 0, 20, 1, "c"), SL(13, 6, 13, 16, 1, "c"),
+    SE(-10, -13, 4, 5, "#8a6a4a"), SR(-11.5, -19, 3, 3, C.woodD), SE(9, -14, 4, 5, "#8a6a4a"), SR(7.5, -20, 3, 3, C.woodD),
+  ], "#7a5a3a");
+}
+function drawMoleHills(ctx, x, y, t) {
+  const mounds = [[-34, 4, 18], [0, -6, 22], [34, 6, 16]];
+  spriteShadow(ctx, x, y + 8, 44);
+  drawProp(ctx, "molehills", x, y, [60, 36, 60, 18], () => {
+    const sh = [];
+    for (const [dx, dy, r] of mounds) sh.push(SE(dx, dy, r, r * 0.7, "a"), SE(dx - r * 0.25, dy - r * 0.25, r * 0.4, r * 0.2, "#9a7a52"), SE(dx, dy - r * 0.15, r * 0.36, r * 0.2, "#1a1218"));
+    return sh;
+  }, "#7a5a3a");
+  const bob = Math.sin(t * 2.2) * 1.5;
+  drawProp(ctx, "molehead", x, y - 8 + bob, [8, 8, 8, 4], () => [SE(0, 0, 6.5, 5.5, "#6e4f3f"), SX(-2, -1, "#ffffff"), SX(2, -1, "#ffffff"), SE(0, 2, 2, 1.5, "#e7a6a0")]);
+}
+function drawRingPitch(ctx, x, y, t) {
+  spriteShadow(ctx, x + 4, y + 10, 40);
+  drawProp(ctx, "ringpitch", x, y, [44, 22, 44, 14], () => {
+    const sh = [];
+    for (let a = 0; a < 6.28; a += 0.2) sh.push(SL(Math.cos(a) * 28, 4 + Math.sin(a) * 9, Math.cos(a + 0.2) * 28, 4 + Math.sin(a + 0.2) * 9, 1.4, C.cream));
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2, px = Math.cos(a) * 13, py = 4 + Math.sin(a) * 4;
+      sh.push(SR(px - 2, py - 9, 4, 11, C.woodL), SE(px, py - 9, 3, 1.6, i === 0 ? C.gold : C.straw));
+    }
+    return sh;
+  });
+  if (Math.sin(t * 2) > -0.4) pixDot(ctx, x + 30, y + 10, 3, "#f9c22b");
+}
+
+// ---------- things the Builder's Board raises ----------
+function drawBuilderBoard(ctx, x, y, t) {
+  spriteShadow(ctx, x + 4, y + 3, 26);
+  drawProp(ctx, "builderboard", x, y, [38, 64, 42, 30], () => [
+    SR(-20, -48, 5, 50, C.woodD), SR(15, -48, 5, 50, C.woodD), SR(-26, -60, 52, 34, C.wood), SR(-26, -60, 52, 3, C.woodL),
+    SR(-21, -55, 42, 24, "#8fd3ff"), SR(-14, -50, 14, 12, "#c7dcd0"), SP([[-14, -50], [-7, -57], [0, -50]], "#c7dcd0"), SR(4, -46, 14, 1, "#4d65b4"), SR(4, -42, 11, 1, "#4d65b4"), SR(4, -38, 13, 1, "#4d65b4"),
+    SL(24, 2, 32, -22, 3, C.woodL), SR(26, -29, 12, 7, C.stoneD),
+  ]);
+  plate(ctx, x, y + 8, "Builder's Board");
+}
+function drawDock(ctx, t) {
+  drawProp(ctx, "dock", 300, 214, [60, 96, 26, 8], () => {
+    const sh = [SR(-17, -68, 34, 70, C.wood)];
+    for (let y = 0; y < 68; y += 8) sh.push(SR(-17, -y - 8, 34, 1, C.woodD), SR(-17, -y - 8, 34, 2, y % 16 ? C.woodL : C.wood));
+    for (const py of [0, -34, -62]) sh.push(SR(-21, py - 8, 5, 14, C.woodD), SR(16, py - 8, 5, 14, C.woodD));
+    sh.push(SR(18, -90, 2, 24, "#3a2a1a"), SR(15, -96, 8, 7, C.gold), SR(14, -98, 10, 2, "#3e3546"));
+    sh.push(SE(-50, -64, 17, 6, "#6a4a2a"), SR(-66, -66, 32, 2, C.woodL));
+    return sh;
+  });
+}
+function drawGardenPlot(ctx, x, y, t) {
+  const ready = !!G.flags.gardenReady, col = ["#f68181", "#cf657f", "#f9c22b", "#8fd3ff"][G.season];
+  drawProp(ctx, `garden${G.season}${ready ? 1 : 0}`, x, y, [52, 34, 52, 30], () => {
+    const sh = [SR(-48, -24, 96, 52, C.wood), SR(-48, -24, 96, 3, C.woodL), SR(-45, -21, 90, 46, "#4a3a2a")];
+    for (let r = 0; r < 3; r++) {
+      sh.push(SR(-42, -14 + r * 15, 84, 3, "#3a2c22"));
+      for (let c = 0; c < 5; c++) {
+        const px = -34 + c * 17, py = -16 + r * 15;
+        sh.push(SL(px, py + 6, px, py - (ready ? 8 : 2), 1.6, C.leafM));
+        sh.push(ready ? SE(px, py - 10, 3.8, 3.8, col) : SE(px + 2, py - 2, 2.2, 1.4, C.leafL));
+      }
+    }
+    return sh;
+  });
+  if (ready) pixDot(ctx, x + 40, y - 30, 2, `rgba(255,246,200,${0.5 + 0.4 * Math.sin(t * 4)})`);
+}
+function drawApiary(ctx, x, y, t) {
+  spriteShadow(ctx, x, y + 22, 40);
+  drawProp(ctx, "apiary", x, y, [42, 34, 42, 28], () => {
+    const sh = [];
+    for (const [hx, hy] of [[-16, 0], [16, 4]]) sh.push(SR(hx - 13, hy - 8, 26, 26, "#c9a24a"), SR(hx - 13, hy - 8, 26, 6, "#e6c074"), SR(hx - 13, hy + 6, 26, 2, "#6a4a1a"), SR(hx - 4, hy + 11, 8, 3, "#2a1a0a"), SR(hx - 15, hy - 13, 30, 6, "#8a6a2a"));
+    return sh;
+  });
+  for (let i = 0; i < 6; i++) {
+    const a = t * 2.5 + i * 1.05;
+    pixDot(ctx, x + Math.cos(a) * (22 + i * 3), y - 6 + Math.sin(a * 1.4) * 14, 2, "#2a2418");
+  }
+  if (G.flags.apiaryReady) pixDot(ctx, x, y - 26, 2, `rgba(255,210,90,${0.5 + 0.4 * Math.sin(t * 4)})`);
+}
+function drawTrainingPost(ctx, x, y, t) {
+  spriteShadow(ctx, x + 4, y + 20, 22);
+  drawProp(ctx, "training", x, y, [28, 66, 28, 28], () => [
+    SR(-3, -34, 6, 56, C.wood), SR(-20, -26, 40, 5, C.wood), SE(0, -14, 14, 18, "#d8b860"), SE(0, -38, 9, 9, "#e8cc78"),
+    SE(0, -14, 8, 8, "#b33831"), SE(0, -14, 5, 5, "#e8d8a8"), SE(0, -14, 2, 2, "#b33831"), SX(-3, -40, C.ink), SX(3, -40, C.ink),
+  ]);
+}

@@ -619,7 +619,7 @@ function willowLayout() {
 }
 
 // ---------------- the Great Willow: painted once into cached layers, then only lightly animated ----------------
-const WILLOW_BOX = { x: 350, y: 80, w: 700, h: 520, s: 1.5 };
+const WILLOW_BOX = { x: 350, y: 80, w: 700, h: 520 };
 const WILLOW_GROUPS = 6;
 let WILLOW_CACHE = {};
 
@@ -629,11 +629,14 @@ function willowPalette(restored) {
     : { bark0: "#30261e", bark1: "#5a4636", bark2: "#8c7458", moss: "#6a8a48", leaf0: "#4a6434", leaf1: "#86a456", blade: "#b0c86c", leaf2: "#dcebb0", strand: "#b0c870", blossom: ["#e8dcc8", "#f4ecd8"] };
 }
 
-function willowLayer() {
+// Layers are painted at the exact art resolution (a = art pixels per world unit), with no line thinner than a pixel.
+function willowLayer(a) {
   const B = WILLOW_BOX, c = document.createElement("canvas");
-  c.width = Math.ceil(B.w * B.s); c.height = Math.ceil(B.h * B.s);
+  c.width = Math.ceil(B.w * a); c.height = Math.ceil(B.h * a);
   const g = c.getContext("2d");
-  g.setTransform(B.s, 0, 0, B.s, -B.x * B.s, -B.y * B.s);
+  g.setTransform(a, 0, 0, a, -B.x * a, -B.y * a);
+  const lwd = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "lineWidth");
+  Object.defineProperty(g, "lineWidth", { get() { return lwd.get.call(this); }, set(v) { lwd.set.call(this, Math.max(v, 1 / a)); } });
   return { c, g };
 }
 
@@ -847,22 +850,23 @@ function paintWillowStrands(g, pal, restored, grp) {
   g.lineCap = "butt";
 }
 
-function willowCache(restored) {
-  if (WILLOW_CACHE[restored]) return WILLOW_CACHE[restored];
+function willowCache(restored, a) {
+  const key = restored + "|" + a.toFixed(3);
+  if (WILLOW_CACHE[key]) return WILLOW_CACHE[key];
+  WILLOW_CACHE = {};
   const pal = willowPalette(restored);
-  const base = willowLayer();
+  const base = willowLayer(a);
   paintWillowBase(base.g, pal, restored);
   const groups = [];
-  for (let k = 0; k < WILLOW_GROUPS; k++) { const l = willowLayer(); paintWillowStrands(l.g, pal, restored, k); groups.push(l.c); }
-  WILLOW_CACHE[restored] = { base: base.c, groups };
-  return WILLOW_CACHE[restored];
+  for (let k = 0; k < WILLOW_GROUPS; k++) { const l = willowLayer(a); paintWillowStrands(l.g, pal, restored, k); groups.push(l.c); }
+  WILLOW_CACHE[key] = { base: base.c, groups };
+  return WILLOW_CACHE[key];
 }
 // warm the cache once the page is up, so the first look at the village does not stall
-setTimeout(() => { try { willowCache(0); } catch (e) { /* drawn on demand instead */ } }, 30);
 
 function drawWillow(ctx, t) {
   const restored = willowOwned("vitality") ? 1 : 0;
-  const cache = willowCache(restored), B = WILLOW_BOX;
+  const wa = ctx.getTransform().a, cache = willowCache(restored, wa), B = WILLOW_BOX;
 
   // aura behind the tree
   if (restored) {
@@ -872,16 +876,21 @@ function drawWillow(ctx, t) {
     ctx.fillStyle = aura;
     ctx.beginPath(); ctx.arc(700, 330, 380, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.drawImage(cache.base, B.x, B.y, B.w, B.h);
+  blitSprite(ctx, cache.base, B.x, B.y, 0, 0);
 
   // the weeping strands sway as six bands, each leaning a little differently
+  // the sway is whole-pixel shifts of thin horizontal strips, so the strands stay crisp
+  const M = ctx.getTransform(), ox = Math.round(M.a * B.x + M.c * B.y + M.e), oy = Math.round(M.b * B.x + M.d * B.y + M.f);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
+  const strip = 3;
   for (let k = 0; k < cache.groups.length; k++) {
-    const lean = Math.sin(t * 1.05 + k * 1.1) * 0.032 + Math.sin(t * 0.55 + k * 2.3) * 0.012;
-    ctx.save();
-    ctx.translate(0, 230); ctx.transform(1, 0, lean, 1, 0, 0); ctx.translate(0, -230);
-    ctx.drawImage(cache.groups[k], B.x, B.y, B.w, B.h);
-    ctx.restore();
+    const lean = Math.sin(t * 1.05 + k * 1.1) * 0.032 + Math.sin(t * 0.55 + k * 2.3) * 0.012, src = cache.groups[k];
+    for (let sy = 0; sy < src.height; sy += strip) {
+      const wy = B.y + sy / wa, shift = Math.round(lean * (wy - 230) * wa);
+      ctx.drawImage(src, 0, sy, src.width, strip, ox + shift, oy + sy, src.width, strip);
+    }
   }
+  ctx.restore();
 
   // slow shafts of light through the leaves
   for (let i = 0; i < 3; i++) {
