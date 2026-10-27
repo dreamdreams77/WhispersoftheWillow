@@ -170,7 +170,7 @@ function drawLighting(ctx, W, H, k, amb, lights) {
   for (const L of lights) {
     if (!L.color) continue;
     const g = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
-    g.addColorStop(0, `rgba(${L.color},${0.26 * strength})`); g.addColorStop(1, `rgba(${L.color},0)`);
+    g.addColorStop(0, `rgba(${L.color},${0.14 * strength})`); g.addColorStop(1, `rgba(${L.color},0)`);
     ctx.fillStyle = g; ctx.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
   }
   ctx.restore();
