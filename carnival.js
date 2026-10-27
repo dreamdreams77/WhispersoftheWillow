@@ -903,60 +903,6 @@ const CV_GAME_BASKET = {
 
 const CV_GAMES = { gallery: CV_GAME_GALLERY, striker: CV_GAME_STRIKER, shell: CV_GAME_SHELL, duck: CV_GAME_DUCK, basket: CV_GAME_BASKET };
 
-// ---------------- the tent in the village ----------------
-function drawCarnivalTent(ctx, x, y, t) {
-  ctx.fillStyle = "rgba(0,0,0,.3)";
-  ctx.beginPath(); ctx.ellipse(x + 8, y + 8, 80, 14, 0, 0, Math.PI * 2); ctx.fill();
-  const bw = 64, wallTop = y - 44;
-  // striped walls, shaded toward the right
-  for (let i = -bw; i < bw; i += 16) { ctx.fillStyle = (i / 16) & 1 ? "#f5ecd6" : "#c8453d"; ctx.fillRect(x + i, wallTop, 16, 44); }
-  const shade = ctx.createLinearGradient(x - bw, 0, x + bw, 0);
-  shade.addColorStop(0, "rgba(255,255,255,.1)"); shade.addColorStop(1, "rgba(0,0,0,.3)");
-  ctx.fillStyle = shade; ctx.fillRect(x - bw, wallTop, bw * 2, 44);
-  // the cone of the roof, in alternating wedges
-  const apexY = y - 112;
-  for (let k = 0; k < 8; k++) {
-    const x0 = x - 76 + k * 19, x1 = x0 + 19;
-    ctx.fillStyle = k % 2 ? "#f5ecd6" : "#c8453d";
-    ctx.beginPath(); ctx.moveTo(x0, wallTop); ctx.lineTo(x1, wallTop); ctx.lineTo(x, apexY); ctx.closePath(); ctx.fill();
-  }
-  ctx.fillStyle = "rgba(0,0,0,.18)";
-  ctx.beginPath(); ctx.moveTo(x, wallTop); ctx.lineTo(x + 76, wallTop); ctx.lineTo(x, apexY); ctx.closePath(); ctx.fill();
-  // scalloped valance along the eaves
-  for (let k = 0; k < 8; k++) {
-    ctx.fillStyle = k % 2 ? "#c8453d" : "#f5ecd6";
-    ctx.beginPath(); ctx.arc(x - 66 + k * 19 + 9.5, wallTop, 9.5, 0, Math.PI); ctx.fill();
-  }
-  // the entrance, with its curtains parted
-  ctx.fillStyle = "#2a1424";
-  ctx.beginPath(); ctx.moveTo(x - 15, y); ctx.lineTo(x - 15, y - 26); ctx.quadraticCurveTo(x, y - 40, x + 15, y - 26); ctx.lineTo(x + 15, y); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#e8b83a";
-  ctx.beginPath(); ctx.moveTo(x - 15, y - 26); ctx.lineTo(x - 5, y); ctx.lineTo(x - 15, y); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x + 15, y - 26); ctx.lineTo(x + 5, y); ctx.lineTo(x + 15, y); ctx.closePath(); ctx.fill();
-  // the sign
-  ctx.fillStyle = "#3a2414"; cvRoundRect(ctx, x - 34, wallTop + 8, 68, 17, 4); ctx.fill();
-  ctx.strokeStyle = "#e8b83a"; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.fillStyle = "#ffe9a0"; ctx.font = "bold 11px Georgia"; ctx.textAlign = "center";
-  ctx.fillText("MIDWAY", x, wallTop + 20); ctx.textAlign = "left";
-  // a pennant on the peak, flapping
-  ctx.strokeStyle = "#5a3a1c"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(x, apexY); ctx.lineTo(x, apexY - 20); ctx.stroke();
-  const fl = Math.sin(t * 4) * 3;
-  ctx.fillStyle = "#e8b83a";
-  ctx.beginPath(); ctx.moveTo(x, apexY - 20); ctx.lineTo(x + 18 + fl, apexY - 15); ctx.lineTo(x, apexY - 8); ctx.closePath(); ctx.fill();
-  // string lights, twinkling, and a warm glow spilling onto the ground
-  const cols = ["#ffd24a", "#ff7a6a", "#7ad0ff", "#9be08a"];
-  for (let k = 0; k < 9; k++) {
-    const lx = x - 72 + k * 18, ly = wallTop + 12 + Math.sin(k * 0.7) * 2 + (1 - Math.pow((k - 4) / 4, 2)) * 5;
-    ctx.fillStyle = cols[k % 4]; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 3 + k * 1.3);
-    ctx.beginPath(); ctx.arc(lx, ly, 2.4, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  const glow = ctx.createRadialGradient(x, y - 20, 4, x, y - 20, 90);
-  glow.addColorStop(0, "rgba(255,200,120,.22)"); glow.addColorStop(1, "rgba(255,200,120,0)");
-  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 20, 90, 0, Math.PI * 2); ctx.fill();
-}
-
 // ---------------- village point, notices and journal ----------------
 VIL_POINTS.push({ id: "carnival", kind: "carnival", label: "Carnival Midway", x: 480, y: 325, r: 56 });
 

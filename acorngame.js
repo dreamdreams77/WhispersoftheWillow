@@ -177,24 +177,6 @@ function drawAcornMemory(ctx, t, w, h) {
   ctx.textAlign = "left";
 }
 
-// The squirrel's stump in the village.
-function drawAcornStump(ctx, x, y, t) {
-  ctx.fillStyle = "rgba(0,0,0,.28)";
-  ctx.beginPath(); ctx.ellipse(x + 4, y + 16, 24, 8, 0, 0, Math.PI * 2); ctx.fill();
-  const wood = ctx.createLinearGradient(x - 22, y - 10, x + 22, y + 14);
-  wood.addColorStop(0, "#9a7450"); wood.addColorStop(1, "#5a4028");
-  ctx.fillStyle = wood;
-  ctx.beginPath(); ctx.ellipse(x, y, 22, 14, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillRect(x - 22, y, 44, 14);
-  ctx.beginPath(); ctx.ellipse(x, y + 14, 22, 14, 0, 0, Math.PI); ctx.fill();
-  ctx.strokeStyle = "rgba(40,24,10,.5)"; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.ellipse(x, y, 12, 7, 0, 0, Math.PI * 2); ctx.stroke();
-  const bob = Math.sin(t * 2 + x) * 1;
-  ctx.fillStyle = "#8b5a2b";
-  ctx.beginPath(); ctx.ellipse(x - 10, y - 12 + bob, 4, 5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(x + 9, y - 13 - bob, 4, 5, 0, 0, Math.PI * 2); ctx.fill();
-}
-
 DATA.lore.push(
   { title: "The Squirrel's Memory", text: "A squirrel keeps its stash by remembering the order it was hidden in. The Willow, it seems, keeps its memories the same way.", unlock: () => (G.flags.acornBest || 0) >= 2 }
 );

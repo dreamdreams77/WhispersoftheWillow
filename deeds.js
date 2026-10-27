@@ -206,60 +206,6 @@ function openPeddler() {
   openDialogue("Marigold Fennelwick", line + ` (You have ${G.wl} Willowlight.)`, choices);
 }
 
-function drawPeddlerCart(ctx, x, y, t) {
-  const sway = Math.sin(t * 1.4) * 0.6;
-  // shadow and wheels
-  ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.ellipse(x, y + 30, 70, 11, 0, 0, Math.PI * 2); ctx.fill();
-  for (const wx of [-42, 44]) {
-    ctx.strokeStyle = "#3a2414"; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.arc(x + wx, y + 20, 14, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = "#6b4526"; ctx.lineWidth = 1.6;
-    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(x + wx, y + 20); ctx.lineTo(x + wx + Math.cos(a) * 13, y + 20 + Math.sin(a) * 13); ctx.stroke(); }
-  }
-  // cart bed
-  const g = ctx.createLinearGradient(0, y - 4, 0, y + 24);
-  g.addColorStop(0, "#9a6a3c"); g.addColorStop(1, "#5e3b20");
-  ctx.fillStyle = g; ctx.strokeStyle = "rgba(20,12,8,.6)"; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 62, y - 2, 124, 28, 5) : ctx.rect(x - 62, y - 2, 124, 28); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1;
-  for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(x - 62 + i * 25, y - 2); ctx.lineTo(x - 62 + i * 25, y + 26); ctx.stroke(); }
-  // goods on the counter: crates, jars, a basket of berries
-  ctx.fillStyle = "#c9a25a"; ctx.fillRect(x - 54, y - 14, 26, 13); ctx.strokeStyle = "rgba(20,12,8,.5)"; ctx.strokeRect(x - 54, y - 14, 26, 13);
-  ctx.fillStyle = "#b02e5a"; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(x - 50 + i * 5, y - 16, 3, 0, Math.PI * 2); ctx.fill(); }
-  for (const [jx, col] of [[x - 14, "#7fe0d0"], [x + 2, "#ffd98a"], [x + 18, "#f2a6c8"]]) {
-    ctx.fillStyle = "rgba(230,240,240,.55)"; ctx.fillRect(jx - 5, y - 18, 10, 17);
-    ctx.fillStyle = col; ctx.fillRect(jx - 4, y - 12, 8, 10);
-    ctx.fillStyle = "#6b4526"; ctx.fillRect(jx - 5, y - 20, 10, 3);
-  }
-  ctx.fillStyle = "#5f7a3a"; ctx.beginPath(); ctx.ellipse(x + 44, y - 8, 13, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(20,12,8,.5)"; ctx.stroke();
-  // awning on two poles
-  ctx.strokeStyle = "#5e3b20"; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(x - 58, y - 2); ctx.lineTo(x - 58, y - 58); ctx.moveTo(x + 58, y - 2); ctx.lineTo(x + 58, y - 58); ctx.stroke();
-  for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = i % 2 ? "#f4ecd6" : "#4f8f9a";
-    ctx.beginPath(); ctx.moveTo(x - 66 + i * 16.5, y - 60); ctx.lineTo(x - 66 + (i + 1) * 16.5, y - 60); ctx.lineTo(x - 66 + (i + 1) * 16.5 + 2, y - 44); ctx.lineTo(x - 66 + i * 16.5 - 2, y - 44); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.arc(x - 66 + i * 16.5 + 8.2, y - 44, 8.5, 0, Math.PI); ctx.fill();
-  }
-  ctx.strokeStyle = "rgba(20,12,8,.5)"; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x - 66, y - 60); ctx.lineTo(x + 66, y - 60); ctx.stroke();
-  // hanging pots and a lantern
-  ctx.strokeStyle = "#3a2414"; ctx.lineWidth = 1;
-  for (const [hx, col] of [[x - 40, "#b5833c"], [x - 30, "#8fd17a"], [x + 36, "#c23a6b"]]) {
-    ctx.beginPath(); ctx.moveTo(hx, y - 44); ctx.lineTo(hx + sway, y - 34); ctx.stroke();
-    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(hx + sway, y - 30, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  }
-  const lg = ctx.createRadialGradient(x + 14, y - 34, 0, x + 14, y - 34, 26);
-  lg.addColorStop(0, "rgba(255,210,120,.55)"); lg.addColorStop(1, "rgba(255,210,120,0)");
-  ctx.fillStyle = lg; ctx.fillRect(x - 12, y - 60, 52, 52);
-  ctx.fillStyle = "#ffd98a"; ctx.fillRect(x + 11, y - 40, 6, 9); ctx.strokeStyle = "#3a2414"; ctx.strokeRect(x + 11, y - 40, 6, 9);
-  // Marigold, standing behind the counter
-  ctx.save(); ctx.translate(x - 6, y - 24); ctx.scale(1.1, 1.1);
-  drawAnimalLocal(ctx, "hedgehog", "#9a7a5a", 1, Math.sin(t * 2.4) * 0.8, 0, { blink: (t % 5) < 0.12, t });
-  ctx.restore();
-  // a little sign
-  ctx.fillStyle = "rgba(20,26,18,.62)"; ctx.fillRect(x - 46, y + 36, 92, 17);
-  ctx.fillStyle = "#fff6dc"; ctx.font = "12px Georgia"; ctx.textAlign = "center"; ctx.fillText("Marigold's Cart", x, y + 49);
-}
-
 VIL_POINTS.push({ id: "peddler", kind: "peddler", label: "Marigold's Cart", x: 1130, y: 800, r: 56, when: peddlerHere });
 
 DATA.notices.push(

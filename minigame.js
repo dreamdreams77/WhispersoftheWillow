@@ -92,30 +92,3 @@ function drawFireflyCatch(ctx, t, w, h) {
   ctx.textAlign = "left";
 }
 
-// The pond in the village: a small pool with drifting lights.
-function drawPond(ctx, x, y, t) {
-  const pool = ctx.createRadialGradient(x, y, 4, x, y, 58);
-  pool.addColorStop(0, "rgba(90,170,190,.85)"); pool.addColorStop(1, "rgba(40,90,110,.5)");
-  ctx.fillStyle = pool;
-  ctx.beginPath(); ctx.ellipse(x, y, 58, 36, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "rgba(200,240,255,.35)"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(x, y, 58, 36, 0, 0, Math.PI * 2); ctx.stroke();
-  for (let i = 0; i < 4; i++) {
-    const px = x + Math.cos(t * 0.6 + i * 1.6) * 30, py = y + Math.sin(t * 0.8 + i * 1.6) * 14;
-    ctx.fillStyle = `rgba(255,246,150,${0.4 + 0.3 * Math.sin(t * 3 + i)})`;
-    ctx.beginPath(); ctx.arc(px, py, 2.4, 0, Math.PI * 2); ctx.fill();
-  }
-  // a glint sweeping across the water
-  const gx = x + Math.sin(t * 0.4) * 36, gy = y + Math.cos(t * 0.4) * 10;
-  ctx.fillStyle = "rgba(230,250,255,.2)";
-  ctx.beginPath(); ctx.ellipse(gx, gy, 14, 3, -0.2, 0, Math.PI * 2); ctx.fill();
-  // reeds along the lower shore, swaying
-  ctx.strokeStyle = "rgba(110,170,90,.85)"; ctx.lineWidth = 2; ctx.lineCap = "round";
-  for (let i = 0; i < 7; i++) {
-    const a = 0.25 + i * 0.42;
-    const rx = x + Math.cos(a) * 56, ry = y + Math.sin(a) * 34;
-    const sway = Math.sin(t * 1.5 + i) * 3;
-    ctx.beginPath(); ctx.moveTo(rx, ry); ctx.quadraticCurveTo(rx + sway, ry - 8, rx + sway * 1.6, ry - 16); ctx.stroke();
-  }
-  ctx.lineCap = "butt";
-}

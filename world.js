@@ -237,32 +237,6 @@ function gateLock(id) {
   return g.open() ? null : g.msg;
 }
 
-function drawPetSprite(ctx, x, y, id, t) {
-  const pet = DATA.pets[id];
-  if (!pet) return;
-  const bob = Math.sin(t * 4) * 1.5;
-  ctx.fillStyle = "rgba(0,0,0,.25)";
-  ctx.beginPath(); ctx.ellipse(x, y + 9, 6, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-  if (id === "mothling") {
-    const halo = ctx.createRadialGradient(x, y + bob, 1, x, y + bob, 12);
-    halo.addColorStop(0, "rgba(207,232,255,.5)");
-    halo.addColorStop(1, "rgba(207,232,255,0)");
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(x, y + bob, 12, 0, Math.PI * 2); ctx.fill();
-  }
-  if (id === "cinderkit") {
-    const glow = ctx.createRadialGradient(x, y + bob, 1, x, y + bob, 13);
-    glow.addColorStop(0, "rgba(255,160,80,.45)");
-    glow.addColorStop(1, "rgba(255,160,80,0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(x, y + bob, 13, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.fillStyle = pet.color;
-  ctx.beginPath(); ctx.arc(x, y + bob, 5.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#1e140c";
-  ctx.beginPath(); ctx.arc(x - 2, y - 1 + bob, 1, 0, Math.PI * 2); ctx.arc(x + 2, y - 1 + bob, 1, 0, Math.PI * 2); ctx.fill();
-}
-
 function talk(npcId) {
   const v = DATA.villagers[npcId];
   if (!v) return;
@@ -404,30 +378,18 @@ function drawTrail(g, x0, y0, cx, cy, x1, y1, w, rnd) {
   }
 }
 
-let VIL_TEX = null;
-function buildVillageTexture() {
+let VIL_TEX = null, VIL_A = 0;
+function buildVillageTexture(a) {
   const c = document.createElement("canvas");
-  c.width = VIL.w; c.height = VIL.h;
+  c.width = Math.ceil(VIL.w * a); c.height = Math.ceil(VIL.h * a);
   const g = c.getContext("2d");
   let seed = 1337;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
-  // base: sky-tinted gradient, then soft mottling of light and dark grass
-  const base = g.createLinearGradient(0, 0, 0, VIL.h);
-  base.addColorStop(0, "#3a5e3e");
-  base.addColorStop(0.6, "#41703f");
-  base.addColorStop(1, "#33593a");
-  g.fillStyle = base;
-  g.fillRect(0, 0, VIL.w, VIL.h);
-  for (let i = 0; i < 260; i++) {
-    const x = rnd() * VIL.w, y = rnd() * VIL.h, r = 40 + rnd() * 90;
-    const grd = g.createRadialGradient(x, y, 0, x, y, r);
-    const light = rnd() < 0.45;
-    grd.addColorStop(0, light ? "rgba(150,196,100,.16)" : "rgba(20,44,28,.18)");
-    grd.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = grd;
-    g.fillRect(x - r, y - r, r * 2, r * 2);
-  }
+  paintGrassTerrain(g, c.width, c.height, a, rnd);
+  g.scale(a, a);
+  const lwd = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "lineWidth");
+  Object.defineProperty(g, "lineWidth", { get() { return lwd.get.call(this); }, set(v) { lwd.set.call(this, Math.max(v, 1 / a)); } });
 
   // grass tufts: little three-blade clumps in several greens
   const greens = ["#5f8f48", "#7ba65a", "#2f5a34", "#8dbb6a"];
@@ -528,8 +490,9 @@ function drawVillage(ctx, cam, t) {
   ctx.translate(-cam.x, -cam.y);
 
   // painted ground (grass, flowers, cobbled path), built once and reused
-  if (!VIL_TEX) VIL_TEX = buildVillageTexture();
-  ctx.drawImage(VIL_TEX, 0, 0);
+  const va = ctx.getTransform().a;
+  if (!VIL_TEX || VIL_A !== va) { VIL_TEX = buildVillageTexture(va); VIL_A = va; }
+  blitSprite(ctx, VIL_TEX, 0, 0, 0, 0);
 
   // dappled light through the canopy
   drawDappledLight(ctx, t);
@@ -575,13 +538,7 @@ function drawVillage(ctx, cam, t) {
   // gather nodes
   for (const n of WORLD.nodes) {
     if (!n.alive) continue;
-    const color = DATA.items[n.item] ? DATA.items[n.item].color : "#fff";
-    ctx.fillStyle = "#2a4a24";
-    ctx.beginPath(); ctx.ellipse(n.x, n.y + 6, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(n.x, n.y - 4, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.4)";
-    ctx.stroke();
+    drawNodeSprite(ctx, n.x, n.y - 2, DATA.items[n.item] ? DATA.items[n.item].color : "#ffffff");
   }
 
   // gate & points
@@ -613,95 +570,6 @@ function shadeHex(hex, f) {
   const n = parseInt(hex.slice(1), 16);
   const c = v => Math.max(0, Math.min(255, Math.round(v * f)));
   return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
-}
-
-function drawTree(ctx, x, y, r) {
-  // trunk and ground shadow
-  ctx.fillStyle = "rgba(0,0,0,.25)";
-  ctx.beginPath(); ctx.ellipse(x + 6, y + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#4a3122";
-  ctx.fillRect(x - 6, y + r * 0.1, 12, r * 0.7);
-  // layered canopy: dark base, mid, then a lit crown offset toward the light
-  const layers = [
-    { dx: 0, dy: 0, k: 1.0, c: "#22391f" },
-    { dx: -r * 0.2, dy: -r * 0.12, k: 0.78, c: "#2f4f2a" },
-    { dx: r * 0.12, dy: -r * 0.28, k: 0.52, c: "#4a7a3b" },
-  ];
-  for (const L of layers) {
-    const g = ctx.createRadialGradient(x + L.dx - r * 0.2, y + L.dy - r * 0.2, 2, x + L.dx, y + L.dy, r * L.k);
-    g.addColorStop(0, shadeHex(L.c, 1.25));
-    g.addColorStop(1, L.c);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x + L.dx, y + L.dy, r * L.k, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(8,18,8,.38)"; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-  // soft shade on the lower-right of the crown
-  const crownShade = ctx.createRadialGradient(x + r * 0.35, y + r * 0.4, r * 0.2, x + r * 0.2, y + r * 0.1, r * 1.05);
-  crownShade.addColorStop(0, "rgba(0,0,0,0)");
-  crownShade.addColorStop(1, "rgba(0,12,0,.28)");
-  ctx.fillStyle = crownShade;
-  ctx.beginPath(); ctx.arc(x, y, r * 1.0, 0, Math.PI * 2); ctx.fill();
-  // a few lit leaves
-  ctx.fillStyle = "rgba(180,230,140,.35)";
-  for (let i = 0; i < 6; i++) {
-    const a = i * 1.1 + x * 0.01;
-    ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * r * 0.4 - r * 0.1, y - r * 0.35 + Math.sin(a) * r * 0.25, 4, 2, a, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-function drawHut(ctx, x, y, color, name) {
-  const t = WORLD.time;
-  // ground shadow
-  ctx.fillStyle = "rgba(0,0,0,.28)";
-  ctx.beginPath(); ctx.ellipse(x + 6, y + 56, 60, 15, 0, 0, Math.PI * 2); ctx.fill();
-  // walls with a light-to-shadow falloff
-  const wall = ctx.createLinearGradient(x - 46, y, x + 46, y + 44);
-  wall.addColorStop(0, shadeHex(color, 1.2));
-  wall.addColorStop(1, shadeHex(color, 0.65));
-  ctx.fillStyle = wall;
-  ctx.beginPath(); ctx.ellipse(x, y + 24, 46, 32, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "rgba(20,12,4,.45)"; ctx.lineWidth = 1.5; ctx.stroke();
-  // timber ribs
-  ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = 2;
-  for (let i = -2; i <= 2; i++) {
-    ctx.beginPath(); ctx.moveTo(x + i * 16, y + 4); ctx.lineTo(x + i * 18, y + 46); ctx.stroke();
-  }
-  // thatched dome roof
-  const roof = ctx.createRadialGradient(x - 14, y - 18, 6, x, y - 4, 60);
-  roof.addColorStop(0, "#e3c07a");
-  roof.addColorStop(1, "#7a5629");
-  ctx.fillStyle = roof;
-  ctx.beginPath(); ctx.ellipse(x, y + 8, 54, 40, 0, Math.PI, Math.PI * 2); ctx.lineTo(x + 54, y + 12); ctx.lineTo(x - 54, y + 12); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "rgba(60,36,12,.35)"; ctx.lineWidth = 1.5;
-  for (let i = 1; i <= 4; i++) {
-    const r = 54 * (i / 5);
-    ctx.beginPath(); ctx.ellipse(x, y + 8, r, 40 * (i / 5), 0, Math.PI, Math.PI * 2); ctx.stroke();
-  }
-  // round window and warm door glow
-  const pulse = 0.65 + 0.35 * Math.sin(t * 2 + x * 0.01);
-  const glow = ctx.createRadialGradient(x, y + 30, 2, x, y + 30, 44);
-  glow.addColorStop(0, `rgba(255,214,130,${0.5 * pulse})`);
-  glow.addColorStop(1, "rgba(255,214,130,0)");
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(x, y + 30, 44, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#2a1b10";
-  ctx.beginPath(); ctx.moveTo(x - 8, y + 44); ctx.lineTo(x - 8, y + 26); ctx.arc(x, y + 26, 8, Math.PI, 0); ctx.lineTo(x + 8, y + 44); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = `rgba(255,220,140,${0.7 * pulse})`;
-  ctx.beginPath(); ctx.arc(x, y + 14, 4, 0, Math.PI * 2); ctx.fill();
-  // chimney smoke
-  for (let i = 0; i < 3; i++) {
-    const k = ((t * 0.25 + i / 3) % 1);
-    ctx.fillStyle = `rgba(230,225,215,${0.35 * (1 - k)})`;
-    ctx.beginPath(); ctx.arc(x + 28 + k * 10, y - 26 - k * 46, 5 + k * 8, 0, Math.PI * 2); ctx.fill();
-  }
-  // name plate
-  ctx.font = "13px Georgia";
-  ctx.textAlign = "center";
-  const w = ctx.measureText(name).width + 14;
-  ctx.fillStyle = "rgba(20,26,18,.6)";
-  ctx.fillRect(x - w / 2, y - 52, w, 20);
-  ctx.fillStyle = "#fff6dc";
-  ctx.fillText(name, x, y - 37);
 }
 
 // The Great Willow: a flared trunk that forks into limbs, dark twigs fanning up into a broad dome of
@@ -751,7 +619,7 @@ function willowLayout() {
 }
 
 // ---------------- the Great Willow: painted once into cached layers, then only lightly animated ----------------
-const WILLOW_BOX = { x: 350, y: 80, w: 700, h: 520, s: 1.5 };
+const WILLOW_BOX = { x: 350, y: 80, w: 700, h: 520 };
 const WILLOW_GROUPS = 6;
 let WILLOW_CACHE = {};
 
@@ -761,11 +629,14 @@ function willowPalette(restored) {
     : { bark0: "#30261e", bark1: "#5a4636", bark2: "#8c7458", moss: "#6a8a48", leaf0: "#4a6434", leaf1: "#86a456", blade: "#b0c86c", leaf2: "#dcebb0", strand: "#b0c870", blossom: ["#e8dcc8", "#f4ecd8"] };
 }
 
-function willowLayer() {
+// Layers are painted at the exact art resolution (a = art pixels per world unit), with no line thinner than a pixel.
+function willowLayer(a) {
   const B = WILLOW_BOX, c = document.createElement("canvas");
-  c.width = Math.ceil(B.w * B.s); c.height = Math.ceil(B.h * B.s);
+  c.width = Math.ceil(B.w * a); c.height = Math.ceil(B.h * a);
   const g = c.getContext("2d");
-  g.setTransform(B.s, 0, 0, B.s, -B.x * B.s, -B.y * B.s);
+  g.setTransform(a, 0, 0, a, -B.x * a, -B.y * a);
+  const lwd = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "lineWidth");
+  Object.defineProperty(g, "lineWidth", { get() { return lwd.get.call(this); }, set(v) { lwd.set.call(this, Math.max(v, 1 / a)); } });
   return { c, g };
 }
 
@@ -979,22 +850,23 @@ function paintWillowStrands(g, pal, restored, grp) {
   g.lineCap = "butt";
 }
 
-function willowCache(restored) {
-  if (WILLOW_CACHE[restored]) return WILLOW_CACHE[restored];
+function willowCache(restored, a) {
+  const key = restored + "|" + a.toFixed(3);
+  if (WILLOW_CACHE[key]) return WILLOW_CACHE[key];
+  WILLOW_CACHE = {};
   const pal = willowPalette(restored);
-  const base = willowLayer();
+  const base = willowLayer(a);
   paintWillowBase(base.g, pal, restored);
   const groups = [];
-  for (let k = 0; k < WILLOW_GROUPS; k++) { const l = willowLayer(); paintWillowStrands(l.g, pal, restored, k); groups.push(l.c); }
-  WILLOW_CACHE[restored] = { base: base.c, groups };
-  return WILLOW_CACHE[restored];
+  for (let k = 0; k < WILLOW_GROUPS; k++) { const l = willowLayer(a); paintWillowStrands(l.g, pal, restored, k); groups.push(l.c); }
+  WILLOW_CACHE[key] = { base: base.c, groups };
+  return WILLOW_CACHE[key];
 }
 // warm the cache once the page is up, so the first look at the village does not stall
-setTimeout(() => { try { willowCache(0); } catch (e) { /* drawn on demand instead */ } }, 30);
 
 function drawWillow(ctx, t) {
   const restored = willowOwned("vitality") ? 1 : 0;
-  const cache = willowCache(restored), B = WILLOW_BOX;
+  const wa = ctx.getTransform().a, cache = willowCache(restored, wa), B = WILLOW_BOX;
 
   // aura behind the tree
   if (restored) {
@@ -1004,16 +876,21 @@ function drawWillow(ctx, t) {
     ctx.fillStyle = aura;
     ctx.beginPath(); ctx.arc(700, 330, 380, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.drawImage(cache.base, B.x, B.y, B.w, B.h);
+  blitSprite(ctx, cache.base, B.x, B.y, 0, 0);
 
   // the weeping strands sway as six bands, each leaning a little differently
+  // the sway is whole-pixel shifts of thin horizontal strips, so the strands stay crisp
+  const M = ctx.getTransform(), ox = Math.round(M.a * B.x + M.c * B.y + M.e), oy = Math.round(M.b * B.x + M.d * B.y + M.f);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
+  const strip = 3;
   for (let k = 0; k < cache.groups.length; k++) {
-    const lean = Math.sin(t * 1.05 + k * 1.1) * 0.032 + Math.sin(t * 0.55 + k * 2.3) * 0.012;
-    ctx.save();
-    ctx.translate(0, 230); ctx.transform(1, 0, lean, 1, 0, 0); ctx.translate(0, -230);
-    ctx.drawImage(cache.groups[k], B.x, B.y, B.w, B.h);
-    ctx.restore();
+    const lean = Math.sin(t * 1.05 + k * 1.1) * 0.032 + Math.sin(t * 0.55 + k * 2.3) * 0.012, src = cache.groups[k];
+    for (let sy = 0; sy < src.height; sy += strip) {
+      const wy = B.y + sy / wa, shift = Math.round(lean * (wy - 230) * wa);
+      ctx.drawImage(src, 0, sy, src.width, strip, ox + shift, oy + sy, src.width, strip);
+    }
   }
+  ctx.restore();
 
   // slow shafts of light through the leaves
   for (let i = 0; i < 3; i++) {
@@ -1061,35 +938,6 @@ function gateSub(id) {
   return best ? `Deepest: ${best}/${r.maxDepth}` : "Unexplored";
 }
 
-// Gate arch with its label above it on a dark plate, so touch controls never cover it
-function drawGate(ctx, x, y, name, color, sub) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(x, y, 34, Math.PI, 0); ctx.stroke();
-  ctx.font = "13px Georgia";
-  ctx.textAlign = "center";
-  const lines = sub ? [name, sub] : [name];
-  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
-  const h = 18 * lines.length + 8;
-  const top = y - 44 - h;
-  ctx.fillStyle = "rgba(20,26,18,.7)";
-  ctx.fillRect(x - w / 2, top, w, h);
-  ctx.fillStyle = "#fff6dc";
-  lines.forEach((l, i) => ctx.fillText(l, x, top + 18 + i * 18));
-}
-
-// Each animal has its own ears, snout, tail and markings, so they read as creatures at a glance.
-const ANIMAL_STYLE = {
-  fox:      { ear: "tall",  snout: "long",  tail: "bush",  tip: "#fff6e8", belly: "#fbe3c4" },
-  rabbit:   { ear: "long",  snout: "short", tail: "pom",   tip: "#ffffff", belly: "#f4ebe0", inner: "#e8a9a8" },
-  mouse:    { ear: "round", snout: "point", tail: "thin",  belly: "#dcd8e2", inner: "#f0a8b0" },
-  squirrel: { ear: "round", snout: "short", tail: "fluff", belly: "#e7c9a0" },
-  hedgehog: { ear: "small", snout: "point", tail: "stub",  belly: "#e8d8c0", spikes: true },
-  badger:   { ear: "round", snout: "short", tail: "stub",  belly: "#cfcbcd", stripe: true },
-  mole:     { ear: "none",  snout: "nose",  tail: "none",  belly: "#8a6a58", nose: "#e7a6a0" },
-  owl:      { ear: "tufts", snout: "beak",  tail: "none",  belly: "#f1dcb8", front: true, bigEyes: true },
-};
-
 // Body plans. Everyone is drawn in profile facing right (mirrored by facing); the owl faces front.
 // bx/by/brx/bry: body ellipse. hx/hy/hr: head. sn: snout length, sr: snout half height.
 // fx: leg x positions [near front, far front, near back, far back], null to skip a leg.
@@ -1102,394 +950,6 @@ const ANIMAL_BUILD = {
   badger:   { bx: -1, by: 1.5, brx: 14,   bry: 7,   hx: 13, hy: -1.5, hr: 6,   sn: 6,   sr: 2.5, ear: "round", er: 2.8, tail: "stub", fx: [8, 5, -8, -11], lw: 2.5, stripe: true, claws: true },
   mole:     { bx: 0,  by: 2.5, brx: 11.5, bry: 8,   hx: 11, hy: 1,    hr: 5,   sn: 4,   sr: 2,   ear: "none",  tail: "none",  fx: [null, 3, -6, -9], lw: 2.2, paws: true },
 };
-
-function acCapsule(c, x1, y1, x2, y2, r) {
-  const a = Math.atan2(y2 - y1, x2 - x1);
-  c.arc(x1, y1, r, a + Math.PI / 2, a + Math.PI * 1.5);
-  c.arc(x2, y2, r, a - Math.PI / 2, a + Math.PI / 2);
-  c.closePath();
-}
-
-// Draws one animal around its body centre (0,0). base is the body colour, facing is +1 or -1,
-// B is the vertical bob, walk is the gait phase, and opts.blink closes the eyes.
-function drawAnimalLocal(ctx, kind, base, facing, B, walk, opts) {
-  opts = opts || {};
-  if (kind === "owl") { drawOwlLocal(ctx, base, B, opts); return; }
-  const st = ANIMAL_STYLE[kind] || ANIMAL_STYLE.fox;
-  const bd = ANIMAL_BUILD[kind] || ANIMAL_BUILD.fox;
-  const f = facing || 1;
-  const T = opts.t != null ? opts.t : (typeof WORLD !== "undefined" ? WORLD.time : 0);
-  const sway = Math.sin(T * 3.2 + base.length) * (walk ? 0.3 : 0.14);
-  const breath = Math.sin(T * 2.4) * 0.35;
-  const sniff = Math.sin(T * 1.3 + 0.5) * 0.45;
-  const bx = bd.bx, by = bd.by + B, brx = bd.brx, bry = bd.bry + breath;
-  const hx = bd.hx, hy = bd.hy + B + sniff, hr = bd.hr + 0.5;
-  const OUT = "rgba(24,14,10,.66)";
-  const dark = shadeHex(base, 0.55), far = shadeHex(base, 0.8), light = shadeHex(base, 1.25);
-  const sock = bd.sock ? "#3a2418" : null;
-  const ground = 11 + B;
-  const gait = walk ? Math.sin(walk) * 2.4 : 0;
-  const parts = [];
-  const add = (p, fill) => parts.push({ p, fill });
-  const ell = (x, y, rx, ry, rot) => c => c.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2);
-  const dot = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
-
-  ctx.save();
-  ctx.scale(f, 1);
-  ctx.lineJoin = "round"; ctx.lineCap = "round";
-
-  // a thin tail is a line, drawn first
-  if (bd.tail === "thin") {
-    const rx0 = bx - brx + 1, ry0 = by + 2;
-    const tip = Math.sin(T * 2.2) * 2.5;
-    for (const [col, w] of [[OUT, 3.2], ["#d9a6ae", 1.6]]) {
-      ctx.strokeStyle = col; ctx.lineWidth = w;
-      ctx.beginPath(); ctx.moveTo(rx0, ry0); ctx.bezierCurveTo(rx0 - 9, ry0 + 6, rx0 - 14, ry0 - 2 + tip, rx0 - 19, ry0 - 9 + tip); ctx.stroke();
-    }
-  }
-
-  // legs: the far pair first, then the near pair, all tucked under the body
-  const legTop = by + bry * 0.35;
-  const legList = [
-    { x: bd.fx[1], sw: -gait, col: far, back: false },
-    { x: bd.fx[3], sw: gait, col: far, back: true },
-    { x: bd.fx[0], sw: gait, col: base, back: false },
-    { x: bd.fx[2], sw: -gait, col: base, back: true },
-  ];
-  for (const L of legList) {
-    if (L.x == null) continue;
-    const fxp = L.x + L.sw, lw = bd.lw + 0.4;
-    add(c => acCapsule(c, L.x, legTop, fxp, ground - lw * 0.9, lw), L.col);
-    const big = bd.bigFoot && L.back;
-    add(ell(fxp + (big ? 2.4 : 1), ground - 1.4, lw + (big ? 3.8 : 1.6), 2.2), sock || L.col);
-  }
-
-  // tail
-  const rump = { x: bx - brx * 0.85, y: by - (bd.upright ? -4 : 1) };
-  if (bd.tail === "bush") {
-    add(c => { c.save(); c.translate(rump.x, rump.y); c.rotate(-sway); c.moveTo(1, -3.5); c.quadraticCurveTo(-11, -13, -24, -4); c.quadraticCurveTo(-13, 5, 1, 3.5); c.closePath(); c.restore(); }, base);
-  } else if (bd.tail === "fluff") {
-    add(c => { c.save(); c.translate(rump.x, rump.y + 3); c.rotate(-sway * 0.6); c.scale(0.78, 0.78);
-      c.moveTo(0, 0); c.bezierCurveTo(-14, 1, -18, -13, -9, -22); c.bezierCurveTo(-3, -29, 7, -25, 7, -18);
-      c.bezierCurveTo(1, -18, -4, -10, 4, -3); c.closePath(); c.restore(); }, shadeHex(base, 1.08));
-  } else if (bd.tail === "pom") {
-    add(ell(rump.x - 3, rump.y - 1, 3.6, 3.4), st.tip || "#fff");
-  } else if (bd.tail === "stub") {
-    add(ell(rump.x - 1.5, rump.y + 1, 3, 2.4), base);
-  }
-
-  // hedgehog spikes, in two rows, behind the body
-  if (bd.spikes) {
-    const N = 15;
-    for (let i = 0; i < N; i++) {
-      const a = Math.PI * 0.9 + (i / (N - 1)) * Math.PI * 1.03;
-      const cx = bx + Math.cos(a) * brx * 0.92, cy = by + Math.sin(a) * bry * 0.92;
-      const tx = bx + Math.cos(a) * (brx + 5.5) - 2, ty = by + Math.sin(a) * (bry + 5.5);
-      const px = -Math.sin(a) * 2.5, py = Math.cos(a) * 2.5;
-      add(c => { c.moveTo(cx + px, cy + py); c.lineTo(tx, ty); c.lineTo(cx - px, cy - py); c.closePath(); }, i % 2 ? dark : shadeHex(base, 0.4));
-    }
-  }
-
-  // body, haunch, neck
-  const bodyG = ctx.createLinearGradient(0, by - bry, 0, by + bry);
-  bodyG.addColorStop(0, light); bodyG.addColorStop(0.55, base); bodyG.addColorStop(1, shadeHex(base, 0.72));
-  add(ell(bx, by, brx, bry), bodyG);
-  if (bd.haunch) add(ell(bx - brx * 0.4, by + 0.5, brx * 0.66, bry * 1.08), bodyG);
-  if (bd.upright) add(ell(bx - 1, by + 4, brx * 0.95, bry * 0.7), bodyG);
-  const nx = bd.upright ? bx + 1 : bx + brx * 0.55, ny = bd.upright ? by - bry * 0.5 : by - bry * 0.25;
-  add(c => acCapsule(c, nx, ny, hx - 1, hy + 1.5, bd.upright ? 4.2 : bry * 0.6), base);
-
-  // ears (behind the head; the far one a little darker and further back)
-  const twitch = Math.pow(Math.max(0, Math.sin(T * 0.8 + 1.3)), 10) * 0.5;
-  const earAt = (dx, tw, col) => {
-    const ex = hx - hr * 0.25 + dx, ey = hy - hr * 0.72;
-    if (bd.ear === "tall") add(c => { c.save(); c.translate(ex, ey + 2); c.rotate(tw); c.moveTo(-3, 0); c.lineTo(-0.5, -11.5); c.lineTo(3.4, 0); c.closePath(); c.restore(); }, col);
-    else if (bd.ear === "long") add(c => { c.save(); c.translate(ex, ey + 1); c.rotate(tw - 0.1); acCapsule(c, 0, 0, -3.5, -12.5, 2.5); c.restore(); }, col);
-    else if (bd.ear === "round") add(ell(ex - 1, ey - 0.5, bd.er, bd.er), col);
-    else if (bd.ear === "small") add(ell(ex - 1, ey + 0.5, 2.3, 2.5), col);
-    else if (bd.ear === "tuft") add(c => { c.save(); c.translate(ex, ey + 2); c.rotate(tw * 0.5); c.moveTo(-2.6, 0); c.lineTo(-1.5, -8.5); c.lineTo(1, -4); c.lineTo(3, -7); c.lineTo(3.4, 0); c.closePath(); c.restore(); }, col);
-  };
-  if (bd.ear !== "none") { earAt(-3.4, -twitch, far); earAt(1.2, twitch, base); }
-
-  // head and snout
-  const headG = ctx.createRadialGradient(hx - 2, hy - 3, 1, hx, hy, hr + 3);
-  headG.addColorStop(0, light); headG.addColorStop(1, shadeHex(base, 0.92));
-  add(ell(hx, hy, hr, hr * 0.94), headG);
-  const tipX = hx + hr + bd.sn, tipY = hy + hr * 0.3;
-  const snoutPath = c => {
-    c.moveTo(hx, hy - bd.sr * 1.3);
-    c.quadraticCurveTo(hx + hr + bd.sn * 0.55, hy - bd.sr * 1.2, tipX, tipY - bd.sr * 0.2);
-    c.quadraticCurveTo(tipX + 0.5, tipY + bd.sr * 0.9, tipX - 2, tipY + bd.sr * 1.1);
-    c.quadraticCurveTo(hx + hr * 0.8, hy + hr * 0.95, hx, hy + hr * 0.8);
-    c.closePath();
-  };
-  add(snoutPath, shadeHex(base, 1.06));
-
-  // pass 1: one outline around the whole silhouette; pass 2: the colours
-  ctx.strokeStyle = OUT; ctx.lineWidth = 2.3;
-  for (const q of parts) { ctx.beginPath(); q.p(ctx); ctx.stroke(); }
-  for (const q of parts) { ctx.fillStyle = q.fill; ctx.beginPath(); q.p(ctx); ctx.fill(); }
-
-  // coat details, clipped to the body
-  ctx.save();
-  ctx.beginPath(); ell(bx, by, brx, bry)(ctx); if (bd.haunch) ell(bx - brx * 0.4, by + 0.5, brx * 0.66, bry * 1.08)(ctx);
-  if (bd.upright) ell(bx - 1, by + 4, brx * 0.95, bry * 0.7)(ctx);
-  ctx.clip();
-  ctx.fillStyle = st.belly; ctx.globalAlpha = 0.92;
-  ctx.beginPath();
-  if (bd.upright) ctx.ellipse(bx + brx * 0.55, by + 1, brx * 0.55, bry * 0.85, 0, 0, Math.PI * 2);
-  else ctx.ellipse(bx + brx * 0.12, by + bry * 0.78, brx * 0.82, bry * 0.55, 0, 0, Math.PI * 2);
-  ctx.fill(); ctx.globalAlpha = 1;
-  if (kind === "fox") { ctx.fillStyle = st.tip; ctx.beginPath(); ctx.ellipse(bx + brx * 0.85, by + 0.5, 4.6, 5.2, 0, 0, Math.PI * 2); ctx.fill(); }
-  if (kind === "badger") { ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.fillRect(bx - brx, by - bry, brx * 2, 2.4); }
-  ctx.fillStyle = "rgba(20,10,5,.14)";
-  ctx.beginPath(); ctx.ellipse(bx, by - bry * 0.1, brx + 1, bry * 0.55, 0, Math.PI, 0); ctx.fill();
-  ctx.strokeStyle = shadeHex(base, 1.6); ctx.globalAlpha = 0.38; ctx.lineWidth = 1.3;
-  ctx.beginPath(); ctx.ellipse(bx, by, brx - 1.3, bry - 1.3, 0, Math.PI * 1.08, Math.PI * 1.62); ctx.stroke();
-  ctx.globalAlpha = 1;
-  ctx.restore();
-
-  // tail details: the white tip on a fox
-  if (bd.tail === "bush") {
-    ctx.save();
-    ctx.beginPath(); ctx.save(); ctx.translate(rump.x, rump.y); ctx.rotate(-sway);
-    ctx.moveTo(1, -3.5); ctx.quadraticCurveTo(-11, -13, -24, -4); ctx.quadraticCurveTo(-13, 5, 1, 3.5); ctx.closePath(); ctx.restore();
-    ctx.clip();
-    ctx.save(); ctx.translate(rump.x, rump.y); ctx.rotate(-sway);
-    ctx.fillStyle = st.tip; ctx.fillRect(-26, -10, 9, 20);
-    ctx.fillStyle = shadeHex(base, 1.2); ctx.fillRect(-18, -5, 16, 1.6);
-    ctx.restore(); ctx.restore();
-  } else if (bd.tail === "fluff") {
-    ctx.strokeStyle = shadeHex(base, 1.3); ctx.globalAlpha = 0.55; ctx.lineWidth = 1.4;
-    ctx.save(); ctx.translate(rump.x, rump.y + 3); ctx.rotate(-sway * 0.6); ctx.scale(0.78, 0.78);
-    ctx.beginPath(); ctx.moveTo(-3, -3); ctx.bezierCurveTo(-11, -6, -12, -16, -5, -21); ctx.stroke();
-    ctx.restore(); ctx.globalAlpha = 1;
-  }
-
-  // head details, clipped to head and snout
-  ctx.save();
-  ctx.beginPath(); ell(hx, hy, hr, hr * 0.94)(ctx); snoutPath(ctx); ctx.clip();
-  if (bd.stripe) {
-    ctx.fillStyle = "#f1eee6"; ctx.fillRect(hx - hr - 2, hy - hr - 2, hr * 2 + bd.sn + 6, hr * 2 + 4);
-    ctx.strokeStyle = "#1c181a"; ctx.lineWidth = 3.4; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(tipX - 0.5, tipY - 0.5); ctx.lineTo(hx + hr * 0.2, hy - hr * 0.2); ctx.lineTo(hx - hr * 1.1, hy - hr * 0.6); ctx.stroke();
-    ctx.fillStyle = "#1c181a"; ctx.fillRect(hx - hr - 2, hy - hr - 2, hr * 1.2, hr * 1.4);
-  } else if (kind !== "mole") {
-    ctx.fillStyle = st.belly; ctx.globalAlpha = 0.9;
-    ctx.beginPath(); ctx.ellipse(hx + hr * 0.45, hy + hr * 0.78, hr * 0.95 + bd.sn * 0.55, hr * 0.5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  ctx.restore();
-
-  // inner ear
-  if (bd.ear === "long" || bd.ear === "tall" || bd.ear === "round") {
-    const ex = hx - hr * 0.25 + 1.2, ey = hy - hr * 0.72;
-    ctx.fillStyle = st.inner || shadeHex(base, 1.5);
-    ctx.beginPath();
-    if (bd.ear === "tall") { ctx.save(); ctx.translate(ex, ey + 2); ctx.rotate(twitch); ctx.moveTo(-1.5, -0.5); ctx.lineTo(-0.3, -7); ctx.lineTo(1.8, -0.5); ctx.closePath(); ctx.restore(); }
-    else if (bd.ear === "long") { ctx.save(); ctx.translate(ex, ey + 1); ctx.rotate(twitch - 0.1); acCapsule(ctx, -0.3, -1, -3, -10.5, 1.2); ctx.restore(); }
-    else ctx.arc(ex - 1, ey - 0.5, bd.er * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // squirrel: an acorn held in the little paws
-  if (kind === "squirrel") {
-    const ax = bx + brx * 0.95, ay = by + 1.5;
-    ctx.fillStyle = "#cf9d56"; ctx.beginPath(); ctx.ellipse(ax, ay + 0.8, 2.6, 3.2, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#7a4e26"; ctx.beginPath(); ctx.ellipse(ax, ay - 1.4, 3, 1.6, 0, 0, Math.PI * 2); ctx.fill();
-    dot(ax - 2.2, ay + 1.6, 1.9, base); dot(ax + 1.8, ay + 2, 1.9, base);
-  }
-  // mole: big pink digging paws
-  if (bd.paws) {
-    const px = bx + brx * 0.8 + gait * 0.4, py = by + bry * 0.55;
-    ctx.fillStyle = st.nose; ctx.strokeStyle = OUT; ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.ellipse(px, py, 5, 3.4, -0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = "#f6e6d8"; ctx.lineWidth = 1.1;
-    for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(px + 4 , py + i * 1.4); ctx.lineTo(px + 6.8, py + i * 1.8); ctx.stroke(); }
-  }
-  // badger: pale claws on the front foot
-  if (bd.claws) {
-    ctx.strokeStyle = "#efe8d8"; ctx.lineWidth = 0.9;
-    const x0 = bd.fx[0] + gait + 2.4;
-    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x0 + i * 1.5, ground - 1.2); ctx.lineTo(x0 + i * 1.5 + 1.3, ground + 0.8); ctx.stroke(); }
-  }
-
-  // nose
-  if (kind === "mole") {
-    dot(tipX - 0.4, tipY - 0.3, 2.5, st.nose);
-    dot(tipX - 1, tipY - 1.2, 0.8, "#fff");
-  } else {
-    dot(tipX - 0.5, tipY - 0.2, kind === "rabbit" ? 1.4 : 1.7, "#1e140c");
-    dot(tipX - 1, tipY - 0.9, 0.5, "#fff");
-  }
-  // eye
-  const ex2 = hx + hr * 0.42, ey2 = hy - hr * 0.18;
-  const er = kind === "mole" ? 0.9 : kind === "mouse" ? 1.5 : kind === "hedgehog" ? 1.4 : 1.8;
-  if (opts.blink) {
-    ctx.strokeStyle = "#1e140c"; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(ex2 - er, ey2); ctx.lineTo(ex2 + er, ey2); ctx.stroke();
-  } else if (kind === "mole") {
-    dot(ex2, ey2, er, "#140c08");
-  } else {
-    dot(ex2, ey2, er + 0.6, bd.stripe ? "#f1eee6" : "#fff");
-    dot(ex2 + er * 0.2, ey2 + 0.1, er * 0.7, "#1e140c");
-    dot(ex2 - er * 0.1, ey2 - er * 0.4, er * 0.25, "#fff");
-  }
-  // whiskers
-  if (bd.whisk) {
-    ctx.strokeStyle = "rgba(255,255,255,.4)"; ctx.lineWidth = 0.5;
-    for (let i = -1; i <= 1; i += 2) {
-      ctx.beginPath(); ctx.moveTo(tipX - 3, tipY + 0.8); ctx.lineTo(tipX + 2.4, tipY + 0.6 + i * 1.6); ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-// The owl faces the front: folded wings, a feathered chest, a round face with great amber eyes.
-function drawOwlLocal(ctx, base, B, opts) {
-  const st = ANIMAL_STYLE.owl;
-  const T = opts.t != null ? opts.t : (typeof WORLD !== "undefined" ? WORLD.time : 0);
-  const breath = Math.sin(T * 2.4) * 0.4, sniff = Math.sin(T * 1.3 + 0.5) * 0.5;
-  const OUT = "rgba(24,14,10,.66)";
-  const dark = shadeHex(base, 0.55), far = shadeHex(base, 0.72), light = shadeHex(base, 1.22);
-  const hy = -11 + B + sniff;
-  const parts = [];
-  const add = (p, fill) => parts.push({ p, fill });
-  const ell = (x, y, rx, ry, rot) => c => c.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2);
-  ctx.save(); ctx.lineJoin = "round"; ctx.lineCap = "round";
-  for (const s of [-1, 1]) add(ell(s * 4.6, 10.8 + B, 3.6, 1.9), "#d9a040");
-  for (const s of [-1, 1]) add(c => { c.moveTo(s * 5, hy - 5); c.lineTo(s * 10.5, hy - 15.5); c.lineTo(s * 9.5, hy - 2); c.closePath(); }, base);
-  const bodyG = ctx.createLinearGradient(0, -12 + B, 0, 12 + B);
-  bodyG.addColorStop(0, light); bodyG.addColorStop(0.6, base); bodyG.addColorStop(1, far);
-  add(ell(0, 0.5 + B, 10.6, 12 + breath), bodyG);
-  for (const s of [-1, 1]) add(ell(s * 9, 2 + B, 4.2, 10, s * 0.1), far);
-  add(ell(0, hy, 10.6, 8.4), bodyG);
-  ctx.strokeStyle = OUT; ctx.lineWidth = 2.8;
-  for (const q of parts) { ctx.beginPath(); q.p(ctx); ctx.stroke(); }
-  for (const q of parts) { ctx.fillStyle = q.fill; ctx.beginPath(); q.p(ctx); ctx.fill(); }
-  // chest feathers
-  ctx.fillStyle = st.belly; ctx.globalAlpha = 0.95;
-  ctx.beginPath(); ctx.ellipse(0, 3.5 + B, 6.4, 8.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-  ctx.strokeStyle = dark; ctx.globalAlpha = 0.4; ctx.lineWidth = 1;
-  for (let r = 0; r < 3; r++) for (let k = -1; k <= 1; k++) {
-    const cx = k * 3.6 + (r % 2 ? 1.8 : 0), cy = 0 + r * 4.2 + B;
-    ctx.beginPath(); ctx.arc(cx, cy + 1, 1.9, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-  // wing feather lines
-  ctx.strokeStyle = dark; ctx.globalAlpha = 0.35;
-  for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(s * 7.5, 1 + i * 3 + B); ctx.lineTo(s * 10.5, 4 + i * 3 + B); ctx.stroke(); }
-  ctx.globalAlpha = 1;
-  // facial discs and eyes
-  for (const s of [-1, 1]) {
-    ctx.fillStyle = st.belly; ctx.strokeStyle = "rgba(60,36,20,.45)"; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(s * 4.6, hy + 0.5, 5.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    const ex = s * 4.6, ey = hy + 0.2;
-    if (opts.blink) {
-      ctx.strokeStyle = "#1e140c"; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(ex, ey, 3, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-    } else {
-      ctx.fillStyle = "#f4b840"; ctx.beginPath(); ctx.arc(ex, ey, 3.7, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#1e140c"; ctx.beginPath(); ctx.arc(ex, ey, 2.1, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ex - 0.9, ey - 1, 0.8, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.strokeStyle = dark; ctx.lineWidth = 1.8;
-    ctx.beginPath(); ctx.moveTo(s * 1.2, hy - 4.2); ctx.quadraticCurveTo(s * 5, hy - 6.8, s * 9, hy - 3.2); ctx.stroke();
-  }
-  // beak
-  ctx.fillStyle = "#e0a845"; ctx.strokeStyle = OUT; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.moveTo(0, hy + 1.2); ctx.lineTo(2.1, hy + 4.4); ctx.lineTo(0, hy + 7.4); ctx.lineTo(-2.1, hy + 4.4); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.restore();
-}
-
-// Player sprite: species animal, drawn at the sprite origin.
-function drawCritter(ctx, x, y, species, facing, walkT, scale) {
-  const s = DATA.species[species] || DATA.species.fox;
-  const sc = scale || 1;
-  const bob = Math.sin(walkT * 12) * 1.5;
-  ctx.save();
-  ctx.translate(x, y + 4);
-  ctx.scale(sc * 1.3, sc * 1.3);
-  ctx.fillStyle = "rgba(0,0,0,.3)";
-  ctx.beginPath(); ctx.ellipse(0, 10, 13, 5, 0, 0, Math.PI * 2); ctx.fill();
-  drawAnimalLocal(ctx, species, s.color, facing, bob, walkT * 12, {});
-  if (typeof drawGear === "function") drawGear(ctx, species, facing, bob, WORLD.time, walkT * 12);
-  ctx.restore();
-}
-
-// Little signature props so the villagers read as individuals, drawn in the animal's own space.
-function drawNpcAccessory(ctx, kind, face, B, T) {
-  const OUT = "rgba(24,14,10,.65)";
-  const bd = ANIMAL_BUILD[kind];
-  ctx.save();
-  ctx.lineJoin = "round";
-  if (kind === "owl") {
-    const hy = -11 + B;
-    // a plum shawl across the shoulders
-    ctx.fillStyle = "#8a4f8e"; ctx.strokeStyle = OUT; ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.moveTo(-10.5, -1 + B); ctx.quadraticCurveTo(0, 5 + B, 10.5, -1 + B); ctx.lineTo(10, 3 + B); ctx.quadraticCurveTo(0, 9 + B, -10, 3 + B); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#e8c15a"; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(i * 4.2, 6 + B - Math.abs(i) * 0.5, 0.9, 0, Math.PI * 2); ctx.fill(); }
-    // round spectacles
-    ctx.strokeStyle = "#d9b25a"; ctx.lineWidth = 1.2;
-    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 4.6, hy + 0.2, 4.7, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(-1, hy + 0.2); ctx.lineTo(1, hy + 0.2); ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,.14)"; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 4.6, hy + 0.2, 4.5, 0, Math.PI * 2); ctx.fill(); }
-  } else if (bd) {
-    ctx.scale(face, 1);
-    const hx = bd.hx, hy = bd.hy + B, hr = bd.hr + 0.5;
-    if (kind === "mouse") {
-      // a pink blossom tucked by the ear, and a satchel strap
-      const fx = hx - hr * 0.45, fy = hy - hr * 0.55;
-      for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5; ctx.fillStyle = "#f7a8c6"; ctx.beginPath(); ctx.arc(fx + Math.cos(a) * 2.2, fy + Math.sin(a) * 2.2, 1.7, 0, Math.PI * 2); ctx.fill(); }
-      ctx.fillStyle = "#ffe07a"; ctx.beginPath(); ctx.arc(fx, fy, 1.3, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#7a5230"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(bd.bx - 4, bd.by - 4 + B); ctx.lineTo(bd.bx + 4, bd.by + 6 + B); ctx.stroke();
-      ctx.fillStyle = "#a9753f"; ctx.strokeStyle = OUT; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.rect(bd.bx + 2, bd.by + 3 + B, 6, 5); ctx.fill(); ctx.stroke();
-    } else if (kind === "badger") {
-      // a flat cap and a red neckerchief
-      ctx.fillStyle = "#c0503a"; ctx.strokeStyle = OUT; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(hx - 4, hy + hr * 0.8); ctx.lineTo(hx + 5, hy + hr * 0.8); ctx.lineTo(hx + 1, hy + hr * 0.8 + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#4f5a3a";
-      ctx.beginPath(); ctx.ellipse(hx - 0.5, hy - hr * 0.78, hr * 0.95, 3.6, -0.08, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(hx + hr * 0.85, hy - hr * 0.7, 4.2, 1.3, 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    } else if (kind === "mole") {
-      // a miner's helmet with a little lamp
-      ctx.fillStyle = "#e9b62e"; ctx.strokeStyle = OUT; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.ellipse(hx, hy - hr * 0.55, hr * 0.95, hr * 0.75, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(hx, hy - hr * 0.5, hr * 1.1, 1.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      const lx = hx + hr * 0.7, ly = hy - hr * 0.95;
-      const g = ctx.createRadialGradient(lx + 2, ly, 0, lx + 2, ly, 12); g.addColorStop(0, "rgba(255,240,170,.6)"); g.addColorStop(1, "rgba(255,240,170,0)");
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lx + 2, ly, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#fff6c0"; ctx.beginPath(); ctx.arc(lx, ly, 1.8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = OUT; ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-// Villager sprite. The villager turns to face the player.
-function drawNpc(ctx, x, y, color, kind, name) {
-  const t = WORLD.time;
-  const bob = Math.sin(t * 3 + x) * 1.2;
-  const blink = (t + x * 0.01) % 4.2 < 0.12;
-  const face = P.x < x ? -1 : 1;
-  ctx.fillStyle = "rgba(0,0,0,.28)";
-  ctx.beginPath(); ctx.ellipse(x, y + 22, 18, 6.5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.save();
-  ctx.translate(x, y + 7);
-  ctx.scale(1.4, 1.4);
-  drawAnimalLocal(ctx, kind, color, face, bob, 0, { blink });
-  drawNpcAccessory(ctx, kind, face, bob, t);
-  ctx.restore();
-  // name plate
-  if (name) {
-    ctx.font = "12px Georgia";
-    ctx.textAlign = "center";
-    const w = ctx.measureText(name).width + 12;
-    ctx.fillStyle = "rgba(20,26,18,.6)";
-    ctx.fillRect(x - w / 2, y + 28, w, 17);
-    ctx.fillStyle = "#fff6dc";
-    ctx.fillText(name, x, y + 41);
-  }
-}
 
 function drawMotes(ctx, t, cx, cy, spread) {
   // fireflies: soft halo plus a bright core that pulses on its own rhythm
@@ -1506,34 +966,6 @@ function drawMotes(ctx, t, cx, cy, spread) {
     ctx.fillStyle = `rgba(255,255,205,${0.5 + 0.5 * p})`;
     ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2); ctx.fill();
   }
-}
-
-// ---- Spirit shrine ----
-function drawShrine(ctx, x, y) {
-  const awake = willowOwned("spiritbond");
-  const t = WORLD.time;
-  ctx.fillStyle = "rgba(0,0,0,.28)";
-  ctx.beginPath(); ctx.ellipse(x + 4, y + 22, 26, 8, 0, 0, Math.PI * 2); ctx.fill();
-  const stone = ctx.createLinearGradient(x - 14, y, x + 14, y);
-  stone.addColorStop(0, awake ? "#8a8fa6" : "#4a4a52");
-  stone.addColorStop(1, awake ? "#4a4e60" : "#2a2a30");
-  ctx.fillStyle = stone;
-  ctx.beginPath(); ctx.moveTo(x - 14, y + 20); ctx.lineTo(x - 10, y - 22); ctx.lineTo(x + 10, y - 22); ctx.lineTo(x + 14, y + 20); ctx.closePath(); ctx.fill();
-  if (awake) {
-    const g = ctx.createRadialGradient(x, y - 26, 2, x, y - 26, 34 + Math.sin(t * 2) * 3);
-    g.addColorStop(0, "rgba(200,170,255,.6)");
-    g.addColorStop(1, "rgba(200,170,255,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y - 26, 34, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.font = "13px Georgia";
-  ctx.textAlign = "center";
-  const label = "Spirit Shrine";
-  const w = ctx.measureText(label).width + 14;
-  ctx.fillStyle = "rgba(20,26,18,.6)";
-  ctx.fillRect(x - w / 2, y - 60, w, 19);
-  ctx.fillStyle = "#fff6dc";
-  ctx.fillText(label, x, y - 46);
 }
 
 function openShrine() {
