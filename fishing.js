@@ -138,9 +138,7 @@ function drawFishing(ctx, t, w, h) {
   const night = timeOfDay()[3];
   drawGameBackdrop(ctx, w, h, t, night > 0.4 ? GAME_THEMES.pond : GAME_THEMES.forest);
   const wy = h * 0.52;
-  const water = ctx.createLinearGradient(0, wy, 0, h);
-  water.addColorStop(0, "rgba(70,140,160,.55)"); water.addColorStop(1, "rgba(10,40,56,.9)");
-  ctx.fillStyle = water; ctx.fillRect(0, wy, w, h - wy);
+  for (let i = 0; i < 5; i++) { ctx.fillStyle = lerpHex("#0b8a8f", "#0b3a45", i / 4); ctx.fillRect(0, wy + (h - wy) * i / 5, w, (h - wy) / 5 + 1); }
   ctx.strokeStyle = "rgba(210,240,255,.2)"; ctx.lineWidth = 1.5;
   for (let i = 0; i < 12; i++) {
     const rx = ((i * 151 + t * 18) % (w + 60)) - 30, ry = wy + 14 + (i * 47) % (h - wy - 30);
@@ -179,9 +177,7 @@ function drawFishing(ctx, t, w, h) {
     ctx.strokeStyle = "rgba(255,246,220,.7)"; ctx.lineWidth = 1.5; ctx.strokeRect(mx, my, mw, mh);
     // the fish itself, flicking about beside the zone
     const fx = mx - 30, fy = my + zc * mh;
-    ctx.fillStyle = DATA.items[f.id].color;
-    ctx.beginPath(); ctx.ellipse(fx, fy, 16, 7, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(fx + 14, fy); ctx.lineTo(fx + 26, fy - 7 + Math.sin(t * 20) * 3); ctx.lineTo(fx + 26, fy + 7 + Math.sin(t * 20) * 3); ctx.closePath(); ctx.fill();
+    drawFishSprite(ctx, fx, fy, DATA.items[f.id].color, t);
     // the catch bar
     const cx = mx + mw + 14;
     ctx.fillStyle = "rgba(10,20,26,.7)"; ctx.fillRect(cx, my, 10, mh);

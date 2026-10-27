@@ -94,97 +94,6 @@ function stepCarnival(dt) {
 }
 
 
-// ---------------- the midway at night: sky, wheel, tents, lights, curtains ----------------
-function drawMidwayBackdrop(ctx, w, h, t, theme) {
-  const sky = ctx.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, "#0e0b2a"); sky.addColorStop(0.55, theme.top); sky.addColorStop(1, theme.bottom);
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-  // stars
-  for (let i = 0; i < 40; i++) {
-    const x = (i * 131) % w, y = (i * 71) % (h * 0.45);
-    ctx.fillStyle = `rgba(255,248,220,${0.25 + 0.35 * Math.abs(Math.sin(t * 0.9 + i))})`;
-    ctx.fillRect(x, y, 1.6, 1.6);
-  }
-  // a moon
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.arc(w * 0.85 + 7, h * 0.16 - 3, 14, 0, Math.PI * 2);
-  ctx.clip("evenodd");
-  ctx.fillStyle = "rgba(255,244,205,.9)"; ctx.beginPath(); ctx.arc(w * 0.85, h * 0.16, 16, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-  // warm glow behind the booth
-  const gl = ctx.createRadialGradient(w / 2, h * 0.5, 10, w / 2, h * 0.5, Math.max(w, h) * 0.65);
-  gl.addColorStop(0, theme.glow); gl.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = gl; ctx.fillRect(0, 0, w, h);
-  // distant big-top tents
-  const base = h * 0.34;
-  const tents = [[0.12, 46, "#2a1f3d"], [0.34, 34, "#241a36"], [0.7, 40, "#2a1f3d"]];
-  for (const [fx, tw, col] of tents) {
-    const x = w * fx;
-    ctx.fillStyle = col;
-    ctx.beginPath(); ctx.moveTo(x - tw, base); ctx.lineTo(x, base - tw * 0.9); ctx.lineTo(x + tw, base); ctx.closePath(); ctx.fill();
-    ctx.fillRect(x - tw, base, tw * 2, h * 0.04);
-    ctx.fillStyle = "#f2c14e"; ctx.beginPath(); ctx.arc(x, base - tw * 0.9, 2, 0, Math.PI * 2); ctx.fill();
-  }
-  // the wheel, turning slowly, with a lamp on each car
-  const cx = w * 0.52, cy = h * 0.2, R = Math.min(w, h) * 0.17, rot = t * 0.12;
-  ctx.strokeStyle = "rgba(60,48,90,.95)"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx, cy, R * 0.55, 0, Math.PI * 2); ctx.stroke();
-  for (let i = 0; i < 12; i++) {
-    const a = rot + (i / 12) * Math.PI * 2, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke();
-    ctx.fillStyle = ["#e0524a", "#f2c14e", "#5aa9e6", "#7bc67e"][i % 4];
-    ctx.beginPath(); ctx.arc(x, y + 4, 3.4, 0, Math.PI * 2); ctx.fill();
-    const lg = ctx.createRadialGradient(x, y + 4, 0, x, y + 4, 11);
-    lg.addColorStop(0, "rgba(255,230,160,.45)"); lg.addColorStop(1, "rgba(255,230,160,0)");
-    ctx.fillStyle = lg; ctx.fillRect(x - 11, y - 7, 22, 22);
-  }
-  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - R * 0.5, cy + R * 1.5); ctx.moveTo(cx, cy); ctx.lineTo(cx + R * 0.5, cy + R * 1.5); ctx.stroke();
-  // hills in front of the wheel
-  ctx.fillStyle = theme.tree;
-  ctx.beginPath(); ctx.moveTo(0, h);
-  for (let x = 0; x <= w; x += 18) ctx.lineTo(x, h * 0.36 + Math.sin(x * 0.019) * h * 0.03 + Math.sin(x * 0.055 + 1.1) * h * 0.015);
-  ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
-  // paper lanterns and confetti drifting upward and down
-  for (let i = 0; i < 7; i++) {
-    const x = (i * 173 + Math.sin(t * 0.4 + i) * 14) % w, y = h - ((t * (9 + i * 2) + i * 90) % (h * 0.9));
-    const lg = ctx.createRadialGradient(x, y, 0, x, y, 16);
-    lg.addColorStop(0, "rgba(255,190,110,.55)"); lg.addColorStop(1, "rgba(255,190,110,0)");
-    ctx.fillStyle = lg; ctx.fillRect(x - 16, y - 16, 32, 32);
-    ctx.fillStyle = "rgba(255,170,90,.9)"; ctx.fillRect(x - 3, y - 4, 6, 8);
-  }
-  for (let i = 0; i < 18; i++) {
-    const x = (i * 89 + t * 6) % w, y = (i * 61 + t * (14 + i % 4 * 4)) % h;
-    ctx.fillStyle = ["#e0524a", "#f2c14e", "#5aa9e6", "#7bc67e", "#c77dd1"][i % 5];
-    ctx.globalAlpha = 0.5; ctx.save(); ctx.translate(x, y); ctx.rotate(t * 2 + i); ctx.fillRect(-2, -1, 4, 2); ctx.restore(); ctx.globalAlpha = 1;
-  }
-  // a string of lamps under the bunting
-  for (let x = 6, i = 0; x < w; x += 28, i++) {
-    const y = 20 + 10 * (1 - Math.pow((x / w) * 2 - 1, 2));
-    const on = 0.55 + 0.45 * Math.sin(t * 3 + i * 1.7);
-    const lg = ctx.createRadialGradient(x, y, 0, x, y, 12);
-    lg.addColorStop(0, `rgba(255,225,140,${0.5 * on})`); lg.addColorStop(1, "rgba(255,225,140,0)");
-    ctx.fillStyle = lg; ctx.fillRect(x - 12, y - 12, 24, 24);
-    ctx.fillStyle = `rgba(255,240,180,${0.6 + 0.4 * on})`; ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
-  }
-  // red stage curtains with gold tassels at the sides
-  const cw = Math.max(14, w * 0.035);
-  for (const side of [0, 1]) {
-    const x0 = side ? w - cw : 0;
-    const cg = ctx.createLinearGradient(x0, 0, x0 + cw, 0);
-    cg.addColorStop(0, side ? "#7d1f2a" : "#a32a36"); cg.addColorStop(1, side ? "#a32a36" : "#7d1f2a");
-    ctx.fillStyle = cg; ctx.fillRect(x0, 0, cw, h);
-    ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1;
-    for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x0 + k * cw / 4, 0); ctx.lineTo(x0 + k * cw / 4, h); ctx.stroke(); }
-    ctx.fillStyle = "#e8c15a"; ctx.fillRect(side ? x0 - 2 : x0 + cw, h * 0.55, 2, h * 0.05);
-    ctx.beginPath(); ctx.arc(side ? x0 - 1 : x0 + cw + 1, h * 0.6, 3, 0, Math.PI * 2); ctx.fill();
-  }
-  // darker corners
-  const v = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.38, w / 2, h / 2, Math.max(w, h) * 0.78);
-  v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.5)");
-  ctx.fillStyle = v; ctx.fillRect(0, 0, w, h);
-}
-
 function drawCarnival(ctx, t, w, h) {
   const spec = CV_GAMES[CV.id], g = CV.g;
   drawMidwayBackdrop(ctx, w, h, t, GAME_THEMES[spec.theme]);
@@ -336,11 +245,7 @@ const CV_GAME_GALLERY = {
         ctx.globalAlpha = Math.max(0, 1 - tg.hitT / 0.5);
       }
       if (tg.kind === "star") {
-        const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, k.size * L.s);
-        glow.addColorStop(0, "rgba(255,230,120,.7)"); glow.addColorStop(1, "rgba(255,230,120,0)");
-        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, k.size * L.s, 0, Math.PI * 2); ctx.fill();
-        cvStar(ctx, k.size * L.s * 0.6); ctx.fillStyle = "#ffd24a"; ctx.fill();
-        ctx.strokeStyle = "#a8741a"; ctx.lineWidth = 1.5; ctx.stroke();
+        drawGalleryStar(ctx, k.size * L.s);
       } else {
         ctx.scale(sc, sc);
         drawAnimalLocal(ctx, tg.kind, k.color, tg.dir, 0, 0, {});
@@ -424,10 +329,9 @@ const CV_GAME_STRIKER = {
     ctx.fillStyle = "rgba(0,0,0,.3)";
     ctx.beginPath(); ctx.ellipse(cx + 6, yBot + 12, tw + 30, 10, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#6a4a2a"; cvRoundRect(ctx, cx - tw - 18, yBot + 2, tw * 2 + 36, 14, 4); ctx.fill();
-    const track = ctx.createLinearGradient(0, yTop, 0, yBot);
-    track.addColorStop(0, "#f0c24a"); track.addColorStop(0.1, "#d9534f"); track.addColorStop(0.5, "#6bbf59"); track.addColorStop(1, "#3a6ea5");
-    ctx.fillStyle = track; cvRoundRect(ctx, cx - tw / 2, yTop, tw, H, 6); ctx.fill();
-    ctx.strokeStyle = "#3a2414"; ctx.lineWidth = 3; ctx.stroke();
+    const bandsAt = [[0, 0.1, "#f0c24a"], [0.1, 0.25, "#d9534f"], [0.25, 0.5, "#e6904e"], [0.5, 0.75, "#6bbf59"], [0.75, 1, "#3a6ea5"]];
+    for (const [f0, f1, col] of bandsAt) { ctx.fillStyle = col; ctx.fillRect(cx - tw / 2, yTop + f0 * H, tw, (f1 - f0) * H + 1); }
+    ctx.strokeStyle = "#2e222f"; ctx.lineWidth = 4; ctx.strokeRect(cx - tw / 2, yTop, tw, H);
     // inner slot, so the puck reads as running inside the tower
     ctx.fillStyle = "rgba(10,10,20,.55)"; cvRoundRect(ctx, cx - 7, yTop + 4, 14, H - 8, 5); ctx.fill();
     // ticks and names
@@ -442,12 +346,9 @@ const CV_GAME_STRIKER = {
     ctx.textAlign = "left";
     // the bell at the top
     const ring = g.bell ? Math.max(0, 1 - g.t / 1.2) : 0;
-    ctx.save(); ctx.translate(cx, yTop - 14); ctx.rotate(Math.sin(t * 28) * 0.35 * ring);
-    ctx.fillStyle = "#e8b83a";
-    ctx.beginPath(); ctx.moveTo(-14, 10); ctx.quadraticCurveTo(-14, -16, 0, -16); ctx.quadraticCurveTo(14, -16, 14, 10); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "#8a6212"; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = "#8a6212"; ctx.beginPath(); ctx.arc(0, 12, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    drawProp(ctx, "bell", cx + Math.sin(t * 28) * 4 * ring, yTop - 14, [18, 22, 18, 14], () => [
+      SP([[-14, 10], [-13, -4], [-8, -13], [0, -16], [8, -13], [13, -4], [14, 10]], "#f9c22b"), SP([[4, 10], [14, 10], [13, -4], [8, -13], [5, -10]], "c"), SE(0, 12, 3.5, 3.5, "#8a6212"), SR(-9, 4, 18, 2, "#c98a1a"),
+    ]);
     if (g.bell && g.phase === "result") {
       ctx.fillStyle = `rgba(255,236,150,${ring})`; ctx.font = "bold 20px Georgia"; ctx.textAlign = "center";
       ctx.fillText("DING!", cx, yTop - 40 - (1 - ring) * 12); ctx.textAlign = "left";
@@ -463,9 +364,7 @@ const CV_GAME_STRIKER = {
     // the puck rising inside the tower
     if (g.phase !== "aim") {
       const py = Y(g.puck);
-      const grad = ctx.createRadialGradient(cx - 2, py - 2, 1, cx, py, 8);
-      grad.addColorStop(0, "#ffd0c8"); grad.addColorStop(1, "#c0392b");
-      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, py, 8, 0, Math.PI * 2); ctx.fill();
+      drawProp(ctx, "puck", cx, py, [10, 10, 10, 10], () => [SE(0, 0, 8, 8, "#c0392b"), SE(-2, -2, 3.5, 3.5, "#ffd0c8")]);
     }
     // the mallet, raised while you aim and brought down on the swing
     const swingA = g.phase === "aim" ? -1.25 : -1.25 + cvEase(Math.min(1, g.t / 0.14)) * 1.25 * (g.phase === "fly" ? 1 : 1);
@@ -583,8 +482,7 @@ const CV_GAME_SHELL = {
     const baseY = tableTop + tableH * 0.5;
     if (hiddenCup && hiddenCup.lift > 0.05) {
       const ax = X(hiddenCup.x), ay = baseY + 4 * s;
-      ctx.fillStyle = "#8b5a2b"; ctx.beginPath(); ctx.ellipse(ax, ay, 9 * s, 11 * s, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#5a3a1c"; ctx.beginPath(); ctx.ellipse(ax, ay - 8 * s, 10 * s, 5 * s, 0, 0, Math.PI * 2); ctx.fill();
+      drawAcornBig(ctx, ax, ay + 6 * s, s);
     }
     // cups, back to front, so the cup swinging behind is hidden by the one in front
     const order = [...g.cups].sort((a, b) => a.dy - b.dy);
@@ -593,15 +491,7 @@ const CV_GAME_SHELL = {
       const [col, light] = SHELL_COLORS[c.id];
       ctx.fillStyle = "rgba(0,0,0,.25)";
       ctx.beginPath(); ctx.ellipse(x + 4, baseY + c.dy * 22 * s + 6, cw * 0.5, 7 * s, 0, 0, Math.PI * 2); ctx.fill();
-      // a cup upside down: wide at the rim, narrow at the top
-      const body = ctx.createLinearGradient(x - cw / 2, 0, x + cw / 2, 0);
-      body.addColorStop(0, col); body.addColorStop(0.35, light); body.addColorStop(1, col);
-      ctx.fillStyle = body;
-      ctx.beginPath(); ctx.moveTo(x - cw / 2, y); ctx.lineTo(x - cw * 0.32, y - ch); ctx.lineTo(x + cw * 0.32, y - ch); ctx.lineTo(x + cw / 2, y); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = "rgba(30,20,20,.6)"; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.fillRect(x - cw * 0.42, y - ch * 0.42, cw * 0.84, 6 * s);
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.ellipse(x, y - ch, cw * 0.32, 6 * s, 0, 0, Math.PI * 2); ctx.fill();
+      drawCup(ctx, x, y, cw, ch, col, light);
     }
     // the selection marker, during your pick
     if (g.phase === "pick") {
@@ -636,22 +526,6 @@ function duckPick() {
 function duckLaneY(L, lane) {
   const top = L.top + 46, h = L.bottom - 14 - top;
   return top + h * (lane === 0 ? 0.3 : 0.7);
-}
-
-function drawDuck(ctx, x, y, size, dir, k, t, phase) {
-  const bob = Math.sin(t * 2.4 + phase) * 1.5;
-  ctx.save(); ctx.translate(x, y + bob); ctx.scale(dir * size / 20, size / 20);
-  ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(0, 10, 15, 4, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = k.color;
-  ctx.beginPath(); ctx.ellipse(0, 3, 15, 10, 0, 0, Math.PI * 2); ctx.fill();            // body
-  ctx.beginPath(); ctx.ellipse(-10, 0, 6, 5, 0.6, 0, Math.PI * 2); ctx.fill();          // tail
-  ctx.beginPath(); ctx.arc(10, -8, 7.5, 0, Math.PI * 2); ctx.fill();                    // head
-  ctx.fillStyle = "rgba(0,0,0,.14)"; ctx.beginPath(); ctx.ellipse(-1, 6, 11, 5, 0, 0, Math.PI); ctx.fill();
-  ctx.fillStyle = "#f08a24"; ctx.beginPath(); ctx.moveTo(16, -9); ctx.lineTo(24, -6.5); ctx.lineTo(16, -4.5); ctx.closePath(); ctx.fill();  // beak
-  ctx.fillStyle = "#1a1208"; ctx.beginPath(); ctx.arc(11.5, -9.5, 1.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.beginPath(); ctx.ellipse(-2, -1, 8, 4, 0.2, 0, Math.PI * 2); ctx.fill();   // wing sheen
-  if (k.gold) { ctx.strokeStyle = "rgba(255,255,200,.9)"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(0, 0, 19 + Math.sin(t * 5) * 1.5, 0, Math.PI * 2); ctx.stroke(); }
-  ctx.restore();
 }
 
 const CV_GAME_DUCK = {
@@ -715,10 +589,8 @@ const CV_GAME_DUCK = {
   draw(g, ctx, t, L) {
     const s = L.s, pondTop = L.top + 30, pondBot = L.bottom - 4;
     // the pond: a bank of water with soft bands and drifting wave marks
-    const water = ctx.createLinearGradient(0, pondTop, 0, pondBot);
-    water.addColorStop(0, "rgba(70,150,190,.85)"); water.addColorStop(1, "rgba(24,70,110,.9)");
-    ctx.fillStyle = water; cvRoundRect(ctx, 10, pondTop, L.w - 20, pondBot - pondTop, 14); ctx.fill();
-    ctx.strokeStyle = "rgba(200,235,255,.35)"; ctx.lineWidth = 2; ctx.stroke();
+    for (let i = 0; i < 5; i++) { ctx.fillStyle = lerpHex("#4d9be6", "#323353", i / 4); ctx.fillRect(10, pondTop + (pondBot - pondTop) * i / 5, L.w - 20, (pondBot - pondTop) / 5 + 1); }
+    ctx.strokeStyle = "#2e222f"; ctx.lineWidth = 4; ctx.strokeRect(10, pondTop, L.w - 20, pondBot - pondTop);
     ctx.strokeStyle = "rgba(220,245,255,.22)"; ctx.lineWidth = 1.5;
     for (let i = 0; i < 14; i++) {
       const wx = ((i * 83 + t * 14) % (L.w - 40)) + 20, wy = pondTop + 12 + (i * 37) % (pondBot - pondTop - 24);
@@ -775,52 +647,7 @@ function basketPick() {
   for (const [k, d] of Object.entries(BASKET_KINDS)) { n -= d.w; if (n <= 0) return k; }
   return "berry";
 }
-function drawBasketItem(ctx, k, x, y, s, t, ph) {
-  const r = BASKET_KINDS[k].r * s;
-  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 3 + ph) * 0.3);
-  ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,12,8,.6)"; ctx.lineWidth = 1.4;
-  if (k === "berry") {
-    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r * 1.2); g.addColorStop(0, "#ff7a9a"); g.addColorStop(1, "#a8234f");
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#5f9a4a"; ctx.beginPath(); ctx.ellipse(r * 0.1, -r * 0.95, r * 0.55, r * 0.22, -0.4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.3, r * 0.2, 0, Math.PI * 2); ctx.fill();
-  } else if (k === "acorn") {
-    ctx.fillStyle = "#c58a46"; ctx.beginPath(); ctx.ellipse(0, r * 0.2, r * 0.8, r * 1.0, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#7a4e26"; ctx.beginPath(); ctx.ellipse(0, -r * 0.55, r * 0.95, r * 0.5, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.beginPath(); ctx.ellipse(-r * 0.3, r * 0.1, r * 0.15, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
-  } else if (k === "honey") {
-    const gl = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.4); gl.addColorStop(0, "rgba(255,210,90,.5)"); gl.addColorStop(1, "rgba(255,210,90,0)");
-    ctx.fillStyle = gl; ctx.fillRect(-r * 2.4, -r * 2.4, r * 4.8, r * 4.8);
-    ctx.fillStyle = "#ffc247"; ctx.beginPath(); ctx.moveTo(0, -r * 1.3); ctx.quadraticCurveTo(r * 1.1, r * 0.2, 0, r * 1.0); ctx.quadraticCurveTo(-r * 1.1, r * 0.2, 0, -r * 1.3); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.beginPath(); ctx.ellipse(-r * 0.3, 0, r * 0.18, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-  } else {
-    ctx.fillStyle = "#6b4a2a";
-    ctx.beginPath();
-    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, rr = i % 2 ? r * 0.75 : r * 1.3; const px = Math.cos(a) * rr, py = Math.sin(a) * rr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#e8d44a"; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.arc(sx * r * 0.32, -r * 0.1, r * 0.17, 0, Math.PI * 2); ctx.fill(); }
-    ctx.strokeStyle = "#140c08"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-r * 0.3, r * 0.3); ctx.lineTo(r * 0.3, r * 0.3); ctx.stroke();
-  }
-  ctx.restore();
-}
 function basketY(L) { return L.bottom - (L.h < 560 ? 62 : 40) * L.s; }
-function drawWickerBasket(ctx, x, y, s, tilt) {
-  const w = 30 * s, h = 24 * s;
-  ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
-  ctx.strokeStyle = "#7a5230"; ctx.lineWidth = 3 * s; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.arc(0, -h * 0.35, w * 0.85, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); ctx.lineCap = "butt";
-  const g = ctx.createLinearGradient(0, -h * 0.4, 0, h);
-  g.addColorStop(0, "#d8a85a"); g.addColorStop(1, "#8c5e30");
-  ctx.fillStyle = g; ctx.strokeStyle = "rgba(20,12,8,.65)"; ctx.lineWidth = 1.6; ctx.lineJoin = "round";
-  ctx.beginPath(); ctx.moveTo(-w, -h * 0.4); ctx.lineTo(w, -h * 0.4); ctx.lineTo(w * 0.78, h); ctx.lineTo(-w * 0.78, h); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = "rgba(60,36,16,.45)"; ctx.lineWidth = 1;
-  for (let i = 0; i < 4; i++) { const yy = -h * 0.4 + (i + 1) * h * 0.28; ctx.beginPath(); ctx.moveTo(-w + i * 1.2, yy); ctx.lineTo(w - i * 1.2, yy); ctx.stroke(); }
-  for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * w / 3.4, -h * 0.4); ctx.lineTo(i * w / 4.4, h); ctx.stroke(); }
-  ctx.fillStyle = "#b07a3c"; ctx.strokeStyle = "rgba(20,12,8,.65)"; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.ellipse(0, -h * 0.4, w, h * 0.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.restore();
-}
-
 const CV_GAME_BASKET = {
   title: "Berry Basket", theme: "carnival", unit: "points",
   intro: "Catch berries, acorns and honey. Dodge the burrs!",
